@@ -1,6 +1,7 @@
 package tj.soni.vocabulary
 
-import androidx.compose.foundation.horizontalScroll
+import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,13 +11,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import tj.soni.vocabulary.data.database.AppDatabase
-import tj.soni.vocabulary.data.database.DailySessionEntity
+import tj.soni.vocabulary.data.database.StudyLockEntity
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.database.WordProgressEntity
 
@@ -25,344 +31,354 @@ fun StudyScreen(
     database: AppDatabase,
     padding: PaddingValues
 ) {
-    val today = LocalDate.now().toString()
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val dao = remember(database) { database.studyLockDao() }
 
-    val wordFlow = remember(database) {
-        database.wordDao().getAllWords()
-    }
+    val lock by dao.observe().collectAsState(initial = null)
 
-    val sessionFlow = remember(database, today) {
-        database.dailySessionDao().getSessionsForDate(today)
-    }
-
-    val words by wordFlow.collectAsState(initial = emptyList())
-    val sessions by sessionFlow.collectAsState(initial = emptyList())
-
-    var selectedSession by remember { mutableIntStateOf(1) }
-    var questionIndex by remember { mutableIntStateOf(0) }
-    var score by remember { mutableIntStateOf(0) }
+    var words by remember { mutableStateOf(emptyList<WordEntity>()) }
     var selectedAnswer by remember { mutableStateOf<String?>(null) }
-
-    val questions = remember(words, selectedSession) {
-        words.shuffled().take(5)
+    var timeText by remember(lock?.startTime) {
+        mutableStateOf(lock?.startTime ?: "20:00")
     }
+    var countText by remember(lock?.questionCount) {
+        mutableStateOf((lock?.questionCount ?: 20).toString())
+    }
+    var saving by remember { mutableStateOf(false) }
 
-    val question = questions.getOrNull(questionIndex)
+    LaunchedEffect(lock?.questionIds, lock?.active) {
+        selectedAnswer = null
+        words = if (lock?.active == true) {
+            val ids = lock!!.questionIds
+                .split("\n")
+                .filter { it.isNotBlank() }
 
-    val options = remember(question, words) {
-        if (question == null) {
-            emptyList()
+            if (ids.isEmpty()) emptyList()
+            else {
+                val found = dao.getWordsByIds(ids).associateBy { it.id }
+                ids.mapNotNull { found[it] }
+            }
         } else {
-            (
-                words.filter {
-                    it.id != question.id && it.tajik.isNotBlank()
-                }.map { it.tajik }.distinct().shuffled().take(3) +
-                    question.tajik
-                ).shuffled()
+            emptyList()
         }
     }
+
+    val activeLock = lock?.active == true
+    val currentIndex = lock?.currentIndex ?: 0
+    val question = words.getOrNull(currentIndex)
+
+    // Ҳангоми қулф тугмаи Back кор намекунад.
+    BackHandler(enabled = activeLock) { }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding)
+            .padding(if (activeLock) PaddingValues(0.dp) else padding)
             .verticalScroll(rememberScrollState())
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            "Маркази омӯзиш",
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            "5 машғулият • 5 савол дар ҳар машғулият",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text(
-                    "Пешрафти имрӯз",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "${sessions.count { it.completed }} / 5 машғулият иҷро шуд",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = {
-                        sessions.count { it.completed } / 5f
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-
-        Text(
-            "Машғулиятҳоро интихоб кун",
+            if (activeLock) "Қулфи омӯзиш фаъол аст" else "Маркази омӯзиш",
+            fontSize = 25.sp,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            color = MaterialTheme.colorScheme.onBackground
         )
 
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            (1..5).forEach { number ->
-                val done = sessions.any {
-                    it.sessionNumber == number && it.completed
-                }
-
-                FilterChip(
-                    selected = selectedSession == number,
-                    onClick = {
-                        selectedSession = number
-                        questionIndex = 0
-                        score = 0
-                        selectedAnswer = null
-                    },
-                    label = {
-                        Text(
-                            if (done) "✓ $number" else "$number"
-                        )
-                    }
-                )
-            }
-        }
-
-        if (words.isEmpty()) {
-            Text(
-                "Ҳоло калима нест. Аввал луғатро пур кун.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else if (questions.isEmpty()) {
-            Text("Саволҳо дастрас нестанд.")
-        } else if (questionIndex >= questions.size) {
+        if (activeLock) {
             Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(20.dp)
+                )
             ) {
                 Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(22.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("🎉", fontSize = 42.sp)
                     Text(
-                        "Машғулият анҷом ёфт!",
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        "Натиҷа: $score аз ${questions.size}",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 19.sp
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            selectedSession = (selectedSession % 5) + 1
-                            questionIndex = 0
-                            score = 0
-                            selectedAnswer = null
-                        }
-                    ) {
-                        Text("Машғулияти дигар")
-                    }
-                }
-            }
-        } else if (question != null) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(Modifier.padding(20.dp)) {
-                    Text(
-                        "Машғулияти $selectedSession",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        "Саволи ${questionIndex + 1} аз ${questions.size}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "🔒 То анҷоми ҳамаи саволҳо аз омӯзиш баромада намешавад.",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
 
                     LinearProgressIndicator(
                         progress = {
-                            (questionIndex + 1).toFloat() /
-                                questions.size
+                            if (words.isEmpty()) 0f
+                            else currentIndex.toFloat() / words.size
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp)
+                        modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text(
-                        "Тарҷумаи ин калима чист?",
-                        fontSize = 17.sp
-                    )
+                    Text("Савол: ${minOf(currentIndex + 1, words.size)} аз ${words.size}")
 
-                    Spacer(Modifier.height(14.dp))
-
-                    Text(
-                        question.english,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    if (question.example.isNotBlank()) {
-                        Spacer(Modifier.height(8.dp))
+                    if (question == null && words.isNotEmpty()) {
+                        Text("Омӯзиш анҷом ёфт!")
+                    } else if (question == null) {
+                        Text("Саволҳо бор нашуданд. Барномаро аз нав кушоед.")
+                    } else {
                         Text(
-                            question.example,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(Modifier.height(18.dp))
-
-                    options.forEach { answer ->
-                        val isSelected = selectedAnswer == answer
-                        val isCorrect = answer == question.tajik
-
-                        val buttonColor = when {
-                            selectedAnswer == null ->
-                                MaterialTheme.colorScheme.primary
-                            isSelected && isCorrect ->
-                                Color(0xFF238B57)
-                            isSelected && !isCorrect ->
-                                Color(0xFFB3261E)
-                            isCorrect ->
-                                Color(0xFF238B57)
-                            else ->
-                                MaterialTheme.colorScheme.surfaceVariant
-                        }
-
-                        Button(
-                            onClick = {
-                                if (selectedAnswer == null) {
-                                    selectedAnswer = answer
-
-                                    val correct = answer == question.tajik
-
-                                    if (correct) score++
-
-                                    scope.launch {
-                                        val dao = database.wordProgressDao()
-                                        val old = dao.getProgress(question.id)
-                                            ?: WordProgressEntity(
-                                                wordId = question.id
-                                            )
-
-                                        dao.saveProgress(
-                                            old.copy(
-                                                correctCount = old.correctCount +
-                                                    if (correct) 1 else 0,
-                                                wrongCount = old.wrongCount +
-                                                    if (correct) 0 else 1,
-                                                lastReviewedAt =
-                                                    System.currentTimeMillis(),
-                                                isLearned =
-                                                    old.isLearned ||
-                                                        (correct &&
-                                                            old.correctCount + 1 >= 3)
-                                            )
-                                        )
-                                    }
-                                }
-                            },
-                            enabled = selectedAnswer == null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = buttonColor,
-                                disabledContainerColor = buttonColor,
-                                contentColor = Color.White,
-                                disabledContentColor = Color.White
-                            )
-                        ) {
-                            Text(answer)
-                        }
-                    }
-
-                    if (selectedAnswer != null) {
-                        Spacer(Modifier.height(10.dp))
-
-                        Text(
-                            if (selectedAnswer == question.tajik)
-                                "Офарин! Ҷавоби дуруст аст. ✓"
-                            else
-                                "Ҷавоби дуруст: ${question.tajik}",
-                            color = if (selectedAnswer == question.tajik)
-                                Color(0xFF4CAF80)
-                            else
-                                Color(0xFFFF7777),
-                            fontWeight = FontWeight.Bold
+                            question.english,
+                            fontSize = 29.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
 
-                        Spacer(Modifier.height(12.dp))
+                        if (question.example.isNotBlank()) {
+                            Text(question.example)
+                        }
 
-                        Button(
-                            onClick = {
-                                if (questionIndex < questions.lastIndex) {
-                                    questionIndex++
-                                    selectedAnswer = null
-                                } else {
-                                    scope.launch {
-                                        database.dailySessionDao()
-                                            .saveSession(
-                                                DailySessionEntity(
-                                                    sessionDate = today,
-                                                    sessionNumber = selectedSession,
-                                                    completed = true,
-                                                    completedAt =
-                                                        System.currentTimeMillis()
+                        val options = remember(question.id, words) {
+                            (
+                                words.filter {
+                                    it.id != question.id && it.tajik.isNotBlank()
+                                }.map { it.tajik }.distinct().shuffled().take(3) +
+                                    question.tajik
+                                ).distinct().shuffled()
+                        }
+
+                        options.forEach { answer ->
+                            val correct = answer == question.tajik
+                            val chosen = selectedAnswer == answer
+
+                            Button(
+                                onClick = {
+                                    if (selectedAnswer == null) {
+                                        selectedAnswer = answer
+
+                                        scope.launch {
+                                            val progressDao = database.wordProgressDao()
+                                            val old = progressDao.getProgress(question.id)
+                                                ?: WordProgressEntity(wordId = question.id)
+
+                                            progressDao.saveProgress(
+                                                old.copy(
+                                                    correctCount = old.correctCount +
+                                                        if (correct) 1 else 0,
+                                                    wrongCount = old.wrongCount +
+                                                        if (correct) 0 else 1,
+                                                    lastReviewedAt = System.currentTimeMillis(),
+                                                    isLearned = old.isLearned ||
+                                                        (correct && old.correctCount + 1 >= 3)
                                                 )
                                             )
+                                        }
                                     }
-                                    questionIndex = questions.size
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                                },
+                                enabled = selectedAnswer == null,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = when {
+                                        selectedAnswer == null ->
+                                            MaterialTheme.colorScheme.primary
+                                        correct -> Color(0xFF238B57)
+                                        chosen -> Color(0xFFB3261E)
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                )
+                            ) {
+                                Text(answer)
+                            }
+                        }
+
+                        if (selectedAnswer != null) {
                             Text(
-                                if (questionIndex == questions.lastIndex)
-                                    "Анҷом додан"
+                                if (selectedAnswer == question.tajik)
+                                    "Офарин! Ҷавоби дуруст аст. ✓"
                                 else
-                                    "Саволи навбатӣ"
+                                    "Ҷавоби дуруст: ${question.tajik}",
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedAnswer == question.tajik)
+                                    Color(0xFF4CAF80)
+                                else
+                                    Color(0xFFFF7777)
                             )
+
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val latest = dao.get() ?: return@launch
+                                        val next = latest.currentIndex + 1
+
+                                        if (next >= words.size) {
+                                            dao.save(
+                                                latest.copy(
+                                                    active = false,
+                                                    currentIndex = words.size
+                                                )
+                                            )
+                                        } else {
+                                            dao.save(
+                                                latest.copy(currentIndex = next)
+                                            )
+                                            selectedAnswer = null
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    if (currentIndex == words.lastIndex)
+                                        "Анҷом додан ва кушодани қулф"
+                                    else "Саволи навбатӣ"
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        "Танзими қулфи омӯзиш",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
 
-        Text(
-            "Ҷавобҳои дуруст се маротиба такрор шаванд, калима ҳамчун омӯхташуда қайд мешавад.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
-        )
+                    Text("Вақти саршавии ҳаррӯза")
+
+                    OutlinedButton(
+                        onClick = {
+                            val initial = try {
+                                LocalTime.parse(timeText)
+                            } catch (_: Exception) {
+                                LocalTime.of(20, 0)
+                            }
+
+                            TimePickerDialog(
+                                context,
+                                { _, hour, minute ->
+                                    timeText = String.format(
+                                        java.util.Locale.US,
+                                        "%02d:%02d",
+                                        hour,
+                                        minute
+                                    )
+                                },
+                                initial.hour,
+                                initial.minute,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "🕒  $timeText",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Text("Шумораи саволҳо")
+
+                    OutlinedTextField(
+                        value = countText,
+                        onValueChange = {
+                            countText = it.filter { char -> char.isDigit() }.take(3)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Аз 1 то 500 савол") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number
+                        )
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf(10, 20, 50, 100).forEach { number ->
+                            OutlinedButton(
+                                onClick = { countText = number.toString() },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(4.dp)
+                            ) {
+                                Text(number.toString())
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            val count = countText.toIntOrNull()
+                            if (count != null && count in 1..500) {
+                                saving = true
+                                scope.launch {
+                                    val old = dao.get() ?: StudyLockEntity()
+                                    dao.save(
+                                        old.copy(
+                                            startTime = timeText,
+                                            questionCount = count,
+                                            enabled = true,
+                                            active = false,
+                                            sessionDate = ""
+                                        )
+                                    )
+                                    saving = false
+                                }
+                            }
+                        },
+                        enabled = !saving &&
+                            (countText.toIntOrNull() ?: 0) in 1..500,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (saving) "Сабт шуда истодааст..." else "Фаъол кардани қулф")
+                    }
+
+                    if (lock?.enabled == true) {
+                        Text(
+                            "Қулф фаъол аст. Ҳар рӯз соати ${lock!!.startTime} бо ${lock!!.questionCount} савол оғоз мешавад.",
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    val latest = dao.get() ?: return@launch
+                                    dao.save(
+                                        latest.copy(
+                                            enabled = false,
+                                            active = false
+                                        )
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Хомӯш кардани нақша")
+                        }
+                    }
+
+                    if (lock?.active == false &&
+                        lock?.sessionDate == LocalDate.now().toString()
+                    ) {
+                        Text(
+                            "🎉 Саволҳои имрӯз ҷавоб дода шуданд!",
+                            color = Color(0xFF4CAF80),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Text(
+                        "Қулф дар вақти интихобшуда ҳангоми фаъол будани барнома ё боз кардани он оғоз мешавад.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
     }
 }

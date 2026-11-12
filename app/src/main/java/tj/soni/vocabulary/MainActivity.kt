@@ -21,7 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import tj.soni.vocabulary.data.database.AppDatabase
+import tj.soni.vocabulary.data.database.StudyLockScheduler
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.importer.ContentImporter
 
@@ -44,9 +46,25 @@ class MainActivity : ComponentActivity() {
 fun VocabularyApp() {
     val context = LocalContext.current
     val database = remember { AppDatabase.getDatabase(context) }
-    val importer = remember { ContentImporter(context, database) }
-
+    val lockFlow = remember(database) {
+        database.studyLockDao().observe()
+    }
+    val studyLock by lockFlow.collectAsState(initial = null)
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(database) {
+        while (true) {
+            StudyLockScheduler.checkAndStart(database)
+            delay(15000)
+        }
+    }
+
+    LaunchedEffect(studyLock?.active) {
+        if (studyLock?.active == true) {
+            selectedTab = 2
+        }
+    }
+    val importer = remember { ContentImporter(context, database) }
     var language by remember { mutableStateOf("Тоҷикӣ") }
     var searchQuery by remember { mutableStateOf("") }
     var words by remember { mutableStateOf(emptyList<WordEntity>()) }
@@ -98,6 +116,7 @@ fun VocabularyApp() {
         Scaffold(
             containerColor = Background,
             bottomBar = {
+                if (studyLock?.active != true) {
                 NavigationBar(containerColor = SurfaceDark) {
                     val tabs = listOf(
                         "Асосӣ" to Icons.Default.Home,
@@ -123,6 +142,7 @@ fun VocabularyApp() {
                             )
                         )
                     }
+                }
                 }
             }
         ) { padding ->

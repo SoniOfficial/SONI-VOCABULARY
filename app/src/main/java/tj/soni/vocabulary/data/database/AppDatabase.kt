@@ -12,9 +12,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WordEntity::class,
         SentenceEntity::class,
         WordProgressEntity::class,
-        DailySessionEntity::class
+        DailySessionEntity::class,
+        StudyLockEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -23,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sentenceDao(): SentenceDao
     abstract fun wordProgressDao(): WordProgressDao
     abstract fun dailySessionDao(): DailySessionDao
+    abstract fun studyLockDao(): StudyLockDao
 
     companion object {
         @Volatile
@@ -53,6 +55,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS study_lock (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        startTime TEXT NOT NULL,
+                        questionCount INTEGER NOT NULL,
+                        enabled INTEGER NOT NULL,
+                        active INTEGER NOT NULL,
+                        sessionDate TEXT NOT NULL,
+                        questionIds TEXT NOT NULL,
+                        currentIndex INTEGER NOT NULL,
+                        correctCount INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -60,7 +81,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "soni_vocabulary_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
 
                 INSTANCE = instance
