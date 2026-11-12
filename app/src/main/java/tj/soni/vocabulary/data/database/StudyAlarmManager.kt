@@ -1,5 +1,7 @@
 package tj.soni.vocabulary.data.database
 
+import tj.soni.vocabulary.StudyAlarmReceiver
+
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
