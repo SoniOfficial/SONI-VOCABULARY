@@ -189,6 +189,7 @@ fun VocabularyApp() {
                             "Асосӣ" to Icons.Default.Home,
                             "Луғат" to Icons.Default.MenuBook,
                             "Дарсҳо" to Icons.Default.School,
+                            "V1.6" to Icons.Default.Quiz,
                             "Танзимот" to Icons.Default.Settings
                         )
 
@@ -249,6 +250,8 @@ fun VocabularyApp() {
                 )
 
                 2 -> StudyScreen(database, padding)
+
+                3 -> V16Screen(database, padding)
 
                 else -> ProfileScreen(
                     language,

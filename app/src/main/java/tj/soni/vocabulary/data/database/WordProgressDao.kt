@@ -14,6 +14,9 @@ interface WordProgressDao {
     @Query("SELECT * FROM word_progress WHERE wordId = :wordId LIMIT 1")
     suspend fun getProgress(wordId: String): WordProgressEntity?
 
+    @Query("SELECT * FROM word_progress")
+    suspend fun getAllProgress(): List<WordProgressEntity>
+
     @Query("SELECT COUNT(*) FROM word_progress WHERE isLearned = 1")
     fun getLearnedWordCount(): Flow<Int>
 
