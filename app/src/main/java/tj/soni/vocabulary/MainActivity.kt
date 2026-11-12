@@ -275,6 +275,7 @@ fun VocabularyApp() {
 }
 
 
+}
 private fun calculateStreakStats(dates: List<String>): Pair<Int, Int> {
     val studied = dates.mapNotNull {
         runCatching { java.time.LocalDate.parse(it) }.getOrNull()
