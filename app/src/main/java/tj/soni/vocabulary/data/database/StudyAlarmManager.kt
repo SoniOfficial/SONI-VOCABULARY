@@ -9,6 +9,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.Dispatchers
@@ -70,18 +71,29 @@ object StudyAlarmManager {
         val millis = target.atZone(ZoneId.systemDefault())
             .toInstant().toEpochMilli()
 
+        val showIntent = PendingIntent.getActivity(
+            context,
+            400 + id,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                millis,
-                pending
-            )
-        } catch (_: SecurityException) {
-            alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                millis,
-                pending
-            )
+            val alarmInfo = AlarmManager.AlarmClockInfo(millis, showIntent)
+            alarmManager.setAlarmClock(alarmInfo, pending)
+            Log.i("SONI_ALARM", "AlarmClock set: id=$id time=$target")
+        } catch (e: Exception) {
+            Log.e("SONI_ALARM", "AlarmClock failed for id=$id", e)
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    millis,
+                    pending
+                )
+                Log.i("SONI_ALARM", "Exact fallback set: id=$id")
+            } catch (error: Exception) {
+                Log.e("SONI_ALARM", "Fallback failed for id=$id", error)
+            }
         }
     }
 

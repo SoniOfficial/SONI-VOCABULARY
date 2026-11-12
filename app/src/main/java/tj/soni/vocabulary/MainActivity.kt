@@ -1,6 +1,9 @@
 package tj.soni.vocabulary
 
 import android.os.Bundle
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -161,7 +164,7 @@ fun VocabularyApp() {
                             "Асосӣ" to Icons.Default.Home,
                             "Луғат" to Icons.Default.MenuBook,
                             "Дарсҳо" to Icons.Default.School,
-                            "Профил" to Icons.Default.Person
+                            "Танзимот" to Icons.Default.Settings
                         )
 
                         tabs.forEachIndexed { index, item ->
@@ -523,41 +526,231 @@ fun ProfileScreen(
     onLanguageChange: (String) -> Unit,
     padding: PaddingValues
 ) {
+    val context = LocalContext.current
+    var showAbout by remember { mutableStateOf(false) }
+    var showLanguageMenu by remember { mutableStateOf(false) }
+
+    fun openPhoneSettings(intent: Intent) {
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+            } catch (_: Exception) { }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
             .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            "Профил",
+            "Танзимот",
             color = TextWhite,
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Card(colors = CardDefaults.cardColors(containerColor = SurfaceDark)) {
-            Column(Modifier.padding(20.dp)) {
-                Icon(
-                    Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    tint = Purple,
-                    modifier = Modifier.size(56.dp)
-                )
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "Донишҷӯи SONI",
-                    color = TextWhite,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text("Омӯзиши забонҳо", color = Muted)
-            }
+        Text(
+            "Огоҳиҳо ва ёдраскуниҳо",
+            color = Purple,
+            fontWeight = FontWeight.Bold
+        )
+
+        SettingsRow(
+            icon = Icons.Default.Notifications,
+            title = "Огоҳиҳои барнома",
+            subtitle = "Идора кардани иҷозати огоҳиҳо"
+        ) {
+            openPhoneSettings(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                }
+            )
         }
 
-        Text("Забони барнома", color = TextWhite, fontWeight = FontWeight.Bold)
-        LanguageMenu(language, onLanguageChange)
-        Text("Версия: 1.0.0", color = Muted)
+        SettingsRow(
+            icon = Icons.Default.Alarm,
+            title = "Танзими ҳушдорҳо",
+            subtitle = "Иҷозатҳо ва танзимоти ҳушдорҳои SONI"
+        ) {
+            openPhoneSettings(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:${context.packageName}"))
+            )
+        }
+
+        HorizontalDivider(color = SurfaceDark)
+
+        Text(
+            "Кори барнома дар телефон",
+            color = Purple,
+            fontWeight = FontWeight.Bold
+        )
+
+        SettingsRow(
+            icon = Icons.Default.BatteryFull,
+            title = "Батарея ва кори пасзамина",
+            subtitle = "Танзими маҳдудиятҳои батарея"
+        ) {
+            openPhoneSettings(
+                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            )
+        }
+
+        SettingsRow(
+            icon = Icons.Default.PlayArrow,
+            title = "Оғози худкор (Huawei)",
+            subtitle = "App launch ва Run in background"
+        ) {
+            openPhoneSettings(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:${context.packageName}")
+                )
+            )
+        }
+
+        SettingsRow(
+            icon = Icons.Default.Security,
+            title = "Иҷозатҳои барнома",
+            subtitle = "Идора кардани иҷозатҳои SONI"
+        ) {
+            openPhoneSettings(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:${context.packageName}")
+                )
+            )
+        }
+
+        HorizontalDivider(color = SurfaceDark)
+
+        Text(
+            "Танзимоти барнома",
+            color = Purple,
+            fontWeight = FontWeight.Bold
+        )
+
+        SettingsRow(
+            icon = Icons.Default.Language,
+            title = "Забони барнома",
+            subtitle = "Забони интерфейсро интихоб кунед"
+        ) {
+            showLanguageMenu = true
+        }
+
+        if (showLanguageMenu) {
+            AlertDialog(
+                onDismissRequest = { showLanguageMenu = false },
+                title = { Text("Забони барнома") },
+                text = {
+                    Column {
+                        listOf("Тоҷикӣ", "Русский", "English").forEach { item ->
+                            TextButton(
+                                onClick = {
+                                    onLanguageChange(item)
+                                    showLanguageMenu = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    item,
+                                    color = if (language == item) Purple else TextWhite
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showLanguageMenu = false }) {
+                        Text("Пӯшидан")
+                    }
+                }
+            )
+        }
+
+        SettingsRow(
+            icon = Icons.Default.Info,
+            title = "Дар бораи барнома",
+            subtitle = "SONI VOCABULARY · Версия 1.3"
+        ) {
+            showAbout = true
+        }
+
+        if (showAbout) {
+            AlertDialog(
+                onDismissRequest = { showAbout = false },
+                title = { Text("SONI VOCABULARY") },
+                text = {
+                    Text(
+                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.3\nPackage: tj.soni.vocabulary"
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAbout = false }) {
+                        Text("Хуб")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = SurfaceDark
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = Purple,
+                modifier = Modifier.size(27.dp)
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    color = TextWhite,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    subtitle,
+                    color = Muted,
+                    fontSize = 12.sp
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Muted
+            )
+        }
     }
 }
