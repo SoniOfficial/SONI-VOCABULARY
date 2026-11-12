@@ -1,4 +1,11 @@
 package tj.soni.vocabulary
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 
 import android.os.Bundle
 import android.content.Intent
@@ -218,7 +225,8 @@ fun VocabularyApp() {
                 }
             }
         ) { padding ->
-            when (selectedTab) {
+            AnimatedContent(targetState = selectedTab, label = "screen", transitionSpec = { (fadeIn(tween(250)) + slideInHorizontally { it / 12 }) togetherWith (fadeOut(tween(180)) + slideOutHorizontally { -it / 12 }) }) { tab ->
+            when (tab) {
                 0 -> HomeScreen(
                     language = language,
                     onLanguageChange = { language = it },
@@ -974,7 +982,7 @@ fun ProfileScreen(
         SettingsRow(
             icon = Icons.Default.Info,
             title = "Дар бораи барнома",
-            subtitle = "SONI VOCABULARY · Версия 1.3"
+            subtitle = "SONI VOCABULARY · Версия 1.8"
         ) {
             showAbout = true
         }
@@ -985,7 +993,7 @@ fun ProfileScreen(
                 title = { Text("SONI VOCABULARY") },
                 text = {
                     Text(
-                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.3\nPackage: tj.soni.vocabulary"
+                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.8\nPackage: tj.soni.vocabulary"
                     )
                 },
                 confirmButton = {
