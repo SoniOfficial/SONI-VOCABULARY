@@ -1,0 +1,34 @@
+[
+  {
+    "id": "daily_001",
+    "english": "Good morning!",
+    "tajik": "Субҳ ба хайр!",
+    "russian": "Доброе утро!",
+    "level": "Beginner",
+    "category": "Daily Life"
+  },
+  {
+    "id": "daily_002",
+    "english": "How are you?",
+    "tajik": "Шумо чӣ хел ҳастед?",
+    "russian": "Как дела?",
+    "level": "Beginner",
+    "category": "Conversation"
+  },
+  {
+    "id": "daily_003",
+    "english": "Thank you very much.",
+    "tajik": "Ташаккури зиёд.",
+    "russian": "Большое спасибо.",
+    "level": "Beginner",
+    "category": "Conversation"
+  },
+  {
+    "id": "daily_004",
+    "english": "I want to learn English.",
+    "tajik": "Ман мехоҳам забони англисиро омӯзам.",
+    "russian": "Я хочу изучать английский язык.",
+    "level": "Beginner",
+    "category": "Education"
+  }
+]

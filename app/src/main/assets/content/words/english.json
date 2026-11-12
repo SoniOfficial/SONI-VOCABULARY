@@ -1,0 +1,47 @@
+[
+  {
+    "id": "en_001",
+    "english": "Hello",
+    "tajik": "Салом",
+    "russian": "Привет",
+    "category": "Greetings",
+    "level": "Beginner",
+    "example": "Hello, how are you?"
+  },
+  {
+    "id": "en_002",
+    "english": "Book",
+    "tajik": "Китоб",
+    "russian": "Книга",
+    "category": "Education",
+    "level": "Beginner",
+    "example": "I read a book."
+  },
+  {
+    "id": "en_003",
+    "english": "School",
+    "tajik": "Мактаб",
+    "russian": "Школа",
+    "category": "Education",
+    "level": "Beginner",
+    "example": "I go to school."
+  },
+  {
+    "id": "en_004",
+    "english": "Beautiful",
+    "tajik": "Зебо",
+    "russian": "Красивый",
+    "category": "Adjectives",
+    "level": "Beginner",
+    "example": "This is a beautiful day."
+  },
+  {
+    "id": "en_005",
+    "english": "Learn",
+    "tajik": "Омӯхтан",
+    "russian": "Учить",
+    "category": "Education",
+    "level": "Beginner",
+    "example": "I learn English every day."
+  }
+]
