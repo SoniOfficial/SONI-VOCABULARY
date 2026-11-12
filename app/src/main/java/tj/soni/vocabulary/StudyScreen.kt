@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import tj.soni.vocabulary.data.database.AppDatabase
+import tj.soni.vocabulary.data.database.DailySessionEntity
 import tj.soni.vocabulary.data.database.StudyAlarmManager
 import tj.soni.vocabulary.data.database.StudyScheduleEntity
 import tj.soni.vocabulary.data.database.WordEntity
@@ -193,6 +194,19 @@ fun StudyScreen(
                                         val next = latest.currentIndex + 1
 
                                         if (next >= words.size) {
+                                            val studyDate = latest.sessionDate.ifBlank {
+                                                java.time.LocalDate.now().toString()
+                                            }
+
+                                            database.dailySessionDao().saveSession(
+                                                DailySessionEntity(
+                                                    sessionDate = studyDate,
+                                                    sessionNumber = latest.id,
+                                                    completed = true,
+                                                    completedAt = System.currentTimeMillis()
+                                                )
+                                            )
+
                                             dao.save(
                                                 latest.copy(
                                                     active = false,

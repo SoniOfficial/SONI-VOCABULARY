@@ -80,6 +80,11 @@ fun VocabularyApp() {
     }
     val schedules by scheduleFlow.collectAsState(initial = emptyList())
 
+    val completedDatesFlow = remember(database) {
+        database.dailySessionDao().observeCompletedDates()
+    }
+    val completedDates by completedDatesFlow.collectAsState(initial = emptyList())
+
     val hasActiveStudy = schedules.any { it.active }
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -197,6 +202,7 @@ fun VocabularyApp() {
                     onLanguageChange = { language = it },
                     padding = padding,
                     wordCount = words.size,
+                    completedDates = completedDates,
                     onStartStudy = { selectedTab = 2 }
                 )
 
@@ -219,14 +225,147 @@ fun VocabularyApp() {
     }
 }
 
+
+private fun calculateStreakStats(dates: List<String>): Pair<Int, Int> {
+    val studied = dates.mapNotNull {
+        runCatching { java.time.LocalDate.parse(it) }.getOrNull()
+    }.distinct().sorted()
+
+    if (studied.isEmpty()) return 0 to 0
+
+    var best = 1
+    var run = 1
+
+    for (i in 1 until studied.size) {
+        run = if (studied[i - 1].plusDays(1) == studied[i]) run + 1 else 1
+        best = maxOf(best, run)
+    }
+
+    val today = java.time.LocalDate.now()
+    var current = 0
+    var expected = when {
+        today in studied -> today
+        today.minusDays(1) in studied -> today.minusDays(1)
+        else -> null
+    }
+
+    while (expected != null && expected in studied) {
+        current++
+        expected = expected.minusDays(1)
+    }
+
+    return current to best
+}
+
+@Composable
+private fun StreakCalendarCard(
+    completedDates: List<String>,
+    currentStreak: Int,
+    bestStreak: Int
+) {
+    val month = java.time.YearMonth.now()
+    val studied = remember(completedDates) { completedDates.toSet() }
+    val monthNames = listOf(
+        "Январ", "Феврал", "Март", "Апрел", "Май", "Июн",
+        "Июл", "Август", "Сентябр", "Октябр", "Ноябр", "Декабр"
+    )
+    val weekdays = listOf("Ду", "Се", "Чо", "Пн", "Ҷм", "Шн", "Як")
+    val firstDayOffset = month.atDay(1).dayOfWeek.value - 1
+    val totalCells = ((firstDayOffset + month.lengthOfMonth() + 6) / 7) * 7
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(22.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Тақвими омӯзиш",
+                color = TextWhite,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "${monthNames[month.monthValue - 1]} ${month.year}",
+                    color = Purple,
+                    fontWeight = FontWeight.Bold
+                )
+                Text("🔥 $currentStreak рӯз", color = TextWhite)
+            }
+
+            Row {
+                weekdays.forEach { day ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text(day, color = Muted, fontSize = 11.sp)
+                    }
+                }
+            }
+
+            (0 until totalCells).toList().chunked(7).forEach { week ->
+                Row {
+                    week.forEach { cell ->
+                        val dayNumber = cell - firstDayOffset + 1
+                        Box(
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (dayNumber in 1..month.lengthOfMonth()) {
+                                val date = month.atDay(dayNumber).toString()
+                                val done = date in studied
+                                Surface(
+                                    modifier = Modifier.size(32.dp),
+                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                    color = if (done) Purple else Color.Transparent
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            "$dayNumber",
+                                            color = if (done) Color.White else TextWhite,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (done) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Рекорди беҳтарин: $bestStreak рӯз", color = Muted, fontSize = 12.sp)
+                Text("🟣 Омӯзиш", color = Purple, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
 @Composable
 fun HomeScreen(
     language: String,
     onLanguageChange: (String) -> Unit,
     padding: PaddingValues,
     wordCount: Int,
+    completedDates: List<String>,
     onStartStudy: () -> Unit
 ) {
+    val streakStats = remember(completedDates) {
+        calculateStreakStats(completedDates)
+    }
+    val currentStreak = streakStats.first
+    val bestStreak = streakStats.second
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -270,7 +409,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(18.dp))
                     Button(
-                        onClick = {},
+                        onClick = onStartStudy,
                         colors = ButtonDefaults.buttonColors(containerColor = Purple),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -293,8 +432,16 @@ fun HomeScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("$wordCount", "Калима", Modifier.weight(1f))
                 StatCard("0", "Ҷумла", Modifier.weight(1f))
-                StatCard("0", "Рӯз", Modifier.weight(1f))
+                StatCard("$currentStreak", "Streak", Modifier.weight(1f))
             }
+        }
+
+        item {
+            StreakCalendarCard(
+                completedDates = completedDates,
+                currentStreak = currentStreak,
+                bestStreak = bestStreak
+            )
         }
 
         item {

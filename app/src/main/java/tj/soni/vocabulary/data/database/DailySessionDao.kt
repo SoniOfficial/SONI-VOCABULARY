@@ -23,4 +23,11 @@ interface DailySessionDao {
         WHERE sessionDate = :date AND completed = 1
     """)
     fun getCompletedCount(date: String): Flow<Int>
+
+    @Query("""
+        SELECT DISTINCT sessionDate FROM daily_sessions
+        WHERE completed = 1
+        ORDER BY sessionDate ASC
+    """)
+    fun observeCompletedDates(): Flow<List<String>>
 }
