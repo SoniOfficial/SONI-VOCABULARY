@@ -18,11 +18,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import tj.soni.vocabulary.data.database.AppDatabase
-import tj.soni.vocabulary.data.database.StudyLockEntity
+import tj.soni.vocabulary.data.database.StudyAlarmManager
+import tj.soni.vocabulary.data.database.StudyScheduleEntity
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.database.WordProgressEntity
 
@@ -33,73 +32,61 @@ fun StudyScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val dao = remember(database) { database.studyLockDao() }
+    val dao = remember(database) { database.studyScheduleDao() }
+    val schedules by dao.observeAll().collectAsState(initial = emptyList())
 
-    val lock by dao.observe().collectAsState(initial = null)
+    val activeSchedule = schedules.firstOrNull { it.active }
 
     var words by remember { mutableStateOf(emptyList<WordEntity>()) }
     var selectedAnswer by remember { mutableStateOf<String?>(null) }
-    var timeText by remember(lock?.startTime) {
-        mutableStateOf(lock?.startTime ?: "20:00")
-    }
-    var countText by remember(lock?.questionCount) {
-        mutableStateOf((lock?.questionCount ?: 20).toString())
-    }
-    var saving by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(lock?.questionIds, lock?.active) {
+    LaunchedEffect(activeSchedule?.id, activeSchedule?.questionIds) {
         selectedAnswer = null
-        words = if (lock?.active == true) {
-            val ids = lock!!.questionIds
-                .split("\n")
-                .filter { it.isNotBlank() }
-
-            if (ids.isEmpty()) emptyList()
-            else {
-                val found = dao.getWordsByIds(ids).associateBy { it.id }
-                ids.mapNotNull { found[it] }
-            }
+        val active = activeSchedule
+        if (active == null) {
+            words = emptyList()
         } else {
-            emptyList()
+            loading = true
+            val ids = active.questionIds.split("\n").filter { it.isNotBlank() }
+            val found = if (ids.isEmpty()) emptyMap()
+            else dao.getWordsByIds(ids).associateBy { it.id }
+            words = ids.mapNotNull { found[it] }
+            loading = false
         }
     }
 
-    val activeLock = lock?.active == true
-    val currentIndex = lock?.currentIndex ?: 0
+    val active = activeSchedule != null
+    val currentIndex = activeSchedule?.currentIndex ?: 0
     val question = words.getOrNull(currentIndex)
 
-    // Ҳангоми қулф тугмаи Back кор намекунад.
-    BackHandler(enabled = activeLock) { }
+    BackHandler(enabled = active) { }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(if (activeLock) PaddingValues(0.dp) else padding)
+            .padding(if (active) PaddingValues(0.dp) else padding)
             .verticalScroll(rememberScrollState())
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            if (activeLock) "Қулфи омӯзиш фаъол аст" else "Маркази омӯзиш",
+            if (active) "🔒 Машғулияти омӯзиш" else "Маркази омӯзиш",
             fontSize = 25.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            fontWeight = FontWeight.Bold
         )
 
-        if (activeLock) {
+        if (activeSchedule != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(
                     Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        "🔒 То анҷоми ҳамаи саволҳо аз омӯзиш баромада намешавад.",
+                        "Ҷадвали ${activeSchedule.id} фаъол аст",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -114,10 +101,12 @@ fun StudyScreen(
 
                     Text("Савол: ${minOf(currentIndex + 1, words.size)} аз ${words.size}")
 
-                    if (question == null && words.isNotEmpty()) {
+                    if (loading) {
+                        CircularProgressIndicator()
+                    } else if (question == null && words.isNotEmpty()) {
                         Text("Омӯзиш анҷом ёфт!")
                     } else if (question == null) {
-                        Text("Саволҳо бор нашуданд. Барномаро аз нав кушоед.")
+                        Text("Саволҳо бор нашуданд. Луғатро санҷед.")
                     } else {
                         Text(
                             question.english,
@@ -199,7 +188,8 @@ fun StudyScreen(
                             Button(
                                 onClick = {
                                     scope.launch {
-                                        val latest = dao.get() ?: return@launch
+                                        val latest = dao.getById(activeSchedule.id)
+                                            ?: return@launch
                                         val next = latest.currentIndex + 1
 
                                         if (next >= words.size) {
@@ -210,9 +200,7 @@ fun StudyScreen(
                                                 )
                                             )
                                         } else {
-                                            dao.save(
-                                                latest.copy(currentIndex = next)
-                                            )
+                                            dao.save(latest.copy(currentIndex = next))
                                             selectedAnswer = null
                                         }
                                     }
@@ -221,7 +209,7 @@ fun StudyScreen(
                             ) {
                                 Text(
                                     if (currentIndex == words.lastIndex)
-                                        "Анҷом додан ва кушодани қулф"
+                                        "Анҷом додан"
                                     else "Саволи навбатӣ"
                                 )
                             }
@@ -230,153 +218,165 @@ fun StudyScreen(
                 }
             }
         } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            Text(
+                "Се вақти мустақил барои омӯзиши ҳаррӯза",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            schedules.sortedBy { it.id }.forEach { schedule ->
+                StudyScheduleCard(
+                    schedule = schedule,
+                    onSave = { updated ->
+                        scope.launch {
+                            dao.save(updated)
+                            StudyAlarmManager.schedule(context, updated)
+                        }
+                    },
+                    onDisable = {
+                        scope.launch {
+                            val latest = dao.getById(schedule.id) ?: return@launch
+                            val updated = latest.copy(enabled = false, active = false)
+                            dao.save(updated)
+                            StudyAlarmManager.cancel(context, schedule.id)
+                        }
+                    }
                 )
+            }
+
+            Text(
+                "Дар вақти интихобшуда, агар барнома баста бошад, огоҳинома меояд. Барои кушодани машғулият онро пахш кунед.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudyScheduleCard(
+    schedule: StudyScheduleEntity,
+    onSave: (StudyScheduleEntity) -> Unit,
+    onDisable: () -> Unit
+) {
+    val context = LocalContext.current
+
+    var timeText by remember(schedule.id, schedule.startTime) {
+        mutableStateOf(schedule.startTime)
+    }
+    var countText by remember(schedule.id, schedule.questionCount) {
+        mutableStateOf(schedule.questionCount.toString())
+    }
+    var saving by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Ҷадвали ${schedule.id}",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text("Вақти саршавӣ")
+
+            OutlinedButton(
+                onClick = {
+                    val initial = try {
+                        LocalTime.parse(timeText)
+                    } catch (_: Exception) {
+                        LocalTime.of(20, 0)
+                    }
+
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute ->
+                            timeText = String.format(
+                                java.util.Locale.US,
+                                "%02d:%02d",
+                                hour,
+                                minute
+                            )
+                        },
+                        initial.hour,
+                        initial.minute,
+                        true
+                    ).show()
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        "Танзими қулфи омӯзиш",
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Text("🕒  $timeText", fontSize = 21.sp)
+            }
 
-                    Text("Вақти саршавии ҳаррӯза")
+            Text("Шумораи саволҳо")
 
+            OutlinedTextField(
+                value = countText,
+                onValueChange = {
+                    countText = it.filter { char -> char.isDigit() }.take(3)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Аз 1 то 500 савол") },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
+                )
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                listOf(10, 20, 50, 100).forEach { number ->
                     OutlinedButton(
-                        onClick = {
-                            val initial = try {
-                                LocalTime.parse(timeText)
-                            } catch (_: Exception) {
-                                LocalTime.of(20, 0)
-                            }
-
-                            TimePickerDialog(
-                                context,
-                                { _, hour, minute ->
-                                    timeText = String.format(
-                                        java.util.Locale.US,
-                                        "%02d:%02d",
-                                        hour,
-                                        minute
-                                    )
-                                },
-                                initial.hour,
-                                initial.minute,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = { countText = number.toString() },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(4.dp)
                     ) {
-                        Text(
-                            "🕒  $timeText",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                        Text(number.toString())
+                    }
+                }
+            }
+
+            Button(
+                onClick = {
+                    val count = countText.toIntOrNull()
+                    if (count != null && count in 1..500) {
+                        saving = true
+                        onSave(
+                            schedule.copy(
+                                startTime = timeText,
+                                questionCount = count,
+                                enabled = true,
+                                active = false,
+                                sessionDate = ""
+                            )
                         )
+                        saving = false
                     }
+                },
+                enabled = !saving &&
+                    (countText.toIntOrNull() ?: 0) in 1..500,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (schedule.enabled) "Навсозии нақша" else "Фаъол кардани нақша")
+            }
 
-                    Text("Шумораи саволҳо")
+            if (schedule.enabled) {
+                Text(
+                    "Фаъол аст: ҳар рӯз соати ${schedule.startTime}, ${schedule.questionCount} савол.",
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-                    OutlinedTextField(
-                        value = countText,
-                        onValueChange = {
-                            countText = it.filter { char -> char.isDigit() }.take(3)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text("Аз 1 то 500 савол") },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number
-                        )
-                    )
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf(10, 20, 50, 100).forEach { number ->
-                            OutlinedButton(
-                                onClick = { countText = number.toString() },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(4.dp)
-                            ) {
-                                Text(number.toString())
-                            }
-                        }
-                    }
-
-                    Button(
-                        onClick = {
-                            val count = countText.toIntOrNull()
-                            if (count != null && count in 1..500) {
-                                saving = true
-                                scope.launch {
-                                    val old = dao.get() ?: StudyLockEntity()
-                                    dao.save(
-                                        old.copy(
-                                            startTime = timeText,
-                                            questionCount = count,
-                                            enabled = true,
-                                            active = false,
-                                            sessionDate = ""
-                                        )
-                                    )
-                                    saving = false
-                                }
-                            }
-                        },
-                        enabled = !saving &&
-                            (countText.toIntOrNull() ?: 0) in 1..500,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (saving) "Сабт шуда истодааст..." else "Фаъол кардани қулф")
-                    }
-
-                    if (lock?.enabled == true) {
-                        Text(
-                            "Қулф фаъол аст. Ҳар рӯз соати ${lock!!.startTime} бо ${lock!!.questionCount} савол оғоз мешавад.",
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        OutlinedButton(
-                            onClick = {
-                                scope.launch {
-                                    val latest = dao.get() ?: return@launch
-                                    dao.save(
-                                        latest.copy(
-                                            enabled = false,
-                                            active = false
-                                        )
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Хомӯш кардани нақша")
-                        }
-                    }
-
-                    if (lock?.active == false &&
-                        lock?.sessionDate == LocalDate.now().toString()
-                    ) {
-                        Text(
-                            "🎉 Саволҳои имрӯз ҷавоб дода шуданд!",
-                            color = Color(0xFF4CAF80),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Text(
-                        "Қулф дар вақти интихобшуда ҳангоми фаъол будани барнома ё боз кардани он оғоз мешавад.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
+                OutlinedButton(
+                    onClick = onDisable,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Хомӯш кардани ин нақша")
                 }
             }
         }

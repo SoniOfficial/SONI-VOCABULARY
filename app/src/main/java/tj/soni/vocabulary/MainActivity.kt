@@ -1,6 +1,11 @@
 package tj.soni.vocabulary
 
 import android.os.Bundle
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -23,7 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import tj.soni.vocabulary.data.database.AppDatabase
-import tj.soni.vocabulary.data.database.StudyLockScheduler
+import tj.soni.vocabulary.data.database.StudyAlarmManager
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.importer.ContentImporter
 
@@ -34,8 +39,27 @@ private val TextWhite = Color(0xFFF8F5FF)
 private val Muted = Color(0xFFB8ADC9)
 
 class MainActivity : ComponentActivity() {
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (
+            Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        }
+
         setContent {
             VocabularyApp()
         }
@@ -46,30 +70,30 @@ class MainActivity : ComponentActivity() {
 fun VocabularyApp() {
     val context = LocalContext.current
     val database = remember { AppDatabase.getDatabase(context) }
-    val lockFlow = remember(database) {
-        database.studyLockDao().observe()
+
+    val scheduleFlow = remember(database) {
+        database.studyScheduleDao().observeAll()
     }
-    val studyLock by lockFlow.collectAsState(initial = null)
+    val schedules by scheduleFlow.collectAsState(initial = emptyList())
+
+    val hasActiveStudy = schedules.any { it.active }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(database) {
-        while (true) {
-            StudyLockScheduler.checkAndStart(database)
-            delay(15000)
-        }
+        StudyAlarmManager.scheduleAll(context)
     }
 
-    LaunchedEffect(studyLock?.active) {
-        if (studyLock?.active == true) {
+    LaunchedEffect(hasActiveStudy) {
+        if (hasActiveStudy) {
             selectedTab = 2
         }
     }
+
     val importer = remember { ContentImporter(context, database) }
     var language by remember { mutableStateOf("Тоҷикӣ") }
     var searchQuery by remember { mutableStateOf("") }
     var words by remember { mutableStateOf(emptyList<WordEntity>()) }
 
-    // Импорт танҳо ҳангоми тағйир ёфтани версияи контент иҷро мешавад.
     LaunchedEffect(database) {
         val preferences = context.getSharedPreferences(
             "soni_content_preferences",
@@ -95,7 +119,6 @@ fun VocabularyApp() {
         }
     }
 
-    // Ҷустуҷӯи зинда аз Room Database.
     LaunchedEffect(database, searchQuery) {
         database.wordDao()
             .searchWords(searchQuery.trim())
@@ -116,46 +139,61 @@ fun VocabularyApp() {
         Scaffold(
             containerColor = Background,
             bottomBar = {
-                if (studyLock?.active != true) {
-                NavigationBar(containerColor = SurfaceDark) {
-                    val tabs = listOf(
-                        "Асосӣ" to Icons.Default.Home,
-                        "Луғат" to Icons.Default.MenuBook,
-                        "Дарсҳо" to Icons.Default.School,
-                        "Профил" to Icons.Default.Person
-                    )
-
-                    tabs.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            icon = {
-                                Icon(item.second, contentDescription = item.first)
-                            },
-                            label = { Text(item.first) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Purple,
-                                selectedTextColor = Purple,
-                                indicatorColor = Color(0xFF38265B),
-                                unselectedIconColor = Muted,
-                                unselectedTextColor = Muted
-                            )
+                if (!hasActiveStudy) {
+                    NavigationBar(containerColor = SurfaceDark) {
+                        val tabs = listOf(
+                            "Асосӣ" to Icons.Default.Home,
+                            "Луғат" to Icons.Default.MenuBook,
+                            "Дарсҳо" to Icons.Default.School,
+                            "Профил" to Icons.Default.Person
                         )
+
+                        tabs.forEachIndexed { index, item ->
+                            NavigationBarItem(
+                                selected = selectedTab == index,
+                                onClick = { selectedTab = index },
+                                icon = {
+                                    Icon(
+                                        item.second,
+                                        contentDescription = item.first
+                                    )
+                                },
+                                label = { Text(item.first) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Purple,
+                                    selectedTextColor = Purple,
+                                    indicatorColor = Color(0xFF38265B),
+                                    unselectedIconColor = Muted,
+                                    unselectedTextColor = Muted
+                                )
+                            )
+                        }
                     }
-                }
                 }
             }
         ) { padding ->
             when (selectedTab) {
-                0 -> HomeScreen(language, { language = it }, padding, words.size)
+                0 -> HomeScreen(
+                    language,
+                    { language = it },
+                    padding,
+                    words.size
+                )
+
                 1 -> DictionaryScreen(
                     words = words,
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     padding = padding
                 )
+
                 2 -> StudyScreen(database, padding)
-                else -> ProfileScreen(language, { language = it }, padding)
+
+                else -> ProfileScreen(
+                    language,
+                    { language = it },
+                    padding
+                )
             }
         }
     }
