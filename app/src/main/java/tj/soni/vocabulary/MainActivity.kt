@@ -134,7 +134,7 @@ fun VocabularyApp() {
                     onQueryChange = { searchQuery = it },
                     padding = padding
                 )
-                2 -> LessonsScreen(padding)
+                2 -> StudyScreen(database, padding)
                 else -> ProfileScreen(language, { language = it }, padding)
             }
         }
