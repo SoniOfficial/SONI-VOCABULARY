@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import tj.soni.vocabulary.data.database.AppDatabase
 import tj.soni.vocabulary.data.database.StudyAlarmManager
+import tj.soni.vocabulary.data.database.StudyScheduleEntity
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.importer.ContentImporter
 
@@ -80,6 +81,21 @@ fun VocabularyApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(database) {
+        val dao = database.studyScheduleDao()
+        val existingIds = dao.getAll().map { it.id }.toSet()
+
+        val defaults = listOf(
+            StudyScheduleEntity(id = 1, startTime = "09:00"),
+            StudyScheduleEntity(id = 2, startTime = "14:00"),
+            StudyScheduleEntity(id = 3, startTime = "18:00")
+        )
+
+        val missing = defaults.filter { it.id !in existingIds }
+
+        if (missing.isNotEmpty()) {
+            dao.saveAll(missing)
+        }
+
         StudyAlarmManager.scheduleAll(context)
     }
 
@@ -174,10 +190,11 @@ fun VocabularyApp() {
         ) { padding ->
             when (selectedTab) {
                 0 -> HomeScreen(
-                    language,
-                    { language = it },
-                    padding,
-                    words.size
+                    language = language,
+                    onLanguageChange = { language = it },
+                    padding = padding,
+                    wordCount = words.size,
+                    onStartStudy = { selectedTab = 2 }
                 )
 
                 1 -> DictionaryScreen(
@@ -204,7 +221,8 @@ fun HomeScreen(
     language: String,
     onLanguageChange: (String) -> Unit,
     padding: PaddingValues,
-    wordCount: Int
+    wordCount: Int,
+    onStartStudy: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -285,8 +303,11 @@ fun HomeScreen(
             )
         }
 
-        items(5) { index ->
-            SessionCard(index + 1)
+        items(3) { index ->
+            SessionCard(
+                number = index + 1,
+                onClick = onStartStudy
+            )
         }
 
         item {
@@ -318,8 +339,9 @@ fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SessionCard(number: Int) {
+fun SessionCard(number: Int, onClick: () -> Unit) {
     Card(
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
