@@ -14,9 +14,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WordProgressEntity::class,
         DailySessionEntity::class,
         StudyLockEntity::class,
-        StudyScheduleEntity::class
+        StudyScheduleEntity::class,
+        FavoriteWordEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailySessionDao(): DailySessionDao
     abstract fun studyLockDao(): StudyLockDao
     abstract fun studyScheduleDao(): StudyScheduleDao
+    abstract fun favoriteWordDao(): FavoriteWordDao
 
     companion object {
         @Volatile
@@ -43,7 +45,6 @@ abstract class AppDatabase : RoomDatabase() {
                         isLearned INTEGER NOT NULL DEFAULT 0
                     )
                 """)
-
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS daily_sessions (
                         sessionDate TEXT NOT NULL,
@@ -89,19 +90,14 @@ abstract class AppDatabase : RoomDatabase() {
                         correctCount INTEGER NOT NULL
                     )
                 """)
-
-                // Нақшаи кӯҳнаи V1.2 ба ҷадвали якум мегузарад.
                 db.execSQL("""
                     INSERT OR IGNORE INTO study_schedules
                     (id, startTime, questionCount, enabled, active,
                      sessionDate, questionIds, currentIndex, correctCount)
                     SELECT 1, startTime, questionCount, enabled, active,
                            sessionDate, questionIds, currentIndex, correctCount
-                    FROM study_lock
-                    WHERE id = 1
+                    FROM study_lock WHERE id = 1
                 """)
-
-                // Ду ҷадвали нави холӣ.
                 db.execSQL("""
                     INSERT OR IGNORE INTO study_schedules
                     (id, startTime, questionCount, enabled, active,
@@ -109,6 +105,17 @@ abstract class AppDatabase : RoomDatabase() {
                     VALUES
                     (2, '14:00', 20, 0, 0, '', '', 0, 0),
                     (3, '18:00', 20, 0, 0, '', '', 0, 0)
+                """)
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS favorite_words (
+                        wordId TEXT NOT NULL PRIMARY KEY,
+                        addedAt INTEGER NOT NULL
+                    )
                 """)
             }
         }
@@ -123,7 +130,8 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2,
                         MIGRATION_2_3,
-                        MIGRATION_3_4
+                        MIGRATION_3_4,
+                        MIGRATION_4_5
                     )
                     .build()
 

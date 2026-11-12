@@ -29,11 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import tj.soni.vocabulary.data.database.AppDatabase
 import tj.soni.vocabulary.data.database.StudyAlarmManager
 import tj.soni.vocabulary.data.database.StudyScheduleEntity
 import tj.soni.vocabulary.data.database.WordEntity
+import tj.soni.vocabulary.data.database.FavoriteWordEntity
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import tj.soni.vocabulary.data.importer.ContentImporter
 
 private val Background = Color(0xFF100B20)
@@ -74,6 +78,7 @@ class MainActivity : ComponentActivity() {
 fun VocabularyApp() {
     val context = LocalContext.current
     val database = remember { AppDatabase.getDatabase(context) }
+    val scope = rememberCoroutineScope()
 
     val scheduleFlow = remember(database) {
         database.studyScheduleDao().observeAll()
@@ -84,6 +89,21 @@ fun VocabularyApp() {
         database.dailySessionDao().observeCompletedDates()
     }
     val completedDates by completedDatesFlow.collectAsState(initial = emptyList())
+
+    val favoriteFlow = remember(database) {
+        database.favoriteWordDao().getFavorites()
+    }
+    val favoriteItems by favoriteFlow.collectAsState(initial = emptyList())
+    val favoriteIds = remember(favoriteItems) {
+        favoriteItems.map { it.wordId }.toSet()
+    }
+
+    val learnedCount by database.wordProgressDao()
+        .getLearnedWordCount().collectAsState(initial = 0)
+    val correctAnswers by database.wordProgressDao()
+        .getTotalCorrectAnswers().collectAsState(initial = 0)
+    val wrongAnswers by database.wordProgressDao()
+        .getTotalWrongAnswers().collectAsState(initial = 0)
 
     val hasActiveStudy = schedules.any { it.active }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -203,6 +223,9 @@ fun VocabularyApp() {
                     padding = padding,
                     wordCount = words.size,
                     completedDates = completedDates,
+                    learnedCount = learnedCount,
+                    correctAnswers = correctAnswers,
+                    wrongAnswers = wrongAnswers,
                     onStartStudy = { selectedTab = 2 }
                 )
 
@@ -210,7 +233,19 @@ fun VocabularyApp() {
                     words = words,
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
-                    padding = padding
+                    padding = padding,
+                    favoriteIds = favoriteIds,
+                    onFavoriteToggle = { id ->
+                        scope.launch {
+                            if (id in favoriteIds) {
+                                database.favoriteWordDao().removeFavorite(id)
+                            } else {
+                                database.favoriteWordDao().addFavorite(
+                                    FavoriteWordEntity(wordId = id)
+                                )
+                            }
+                        }
+                    }
                 )
 
                 2 -> StudyScreen(database, padding)
@@ -358,6 +393,9 @@ fun HomeScreen(
     padding: PaddingValues,
     wordCount: Int,
     completedDates: List<String>,
+    learnedCount: Int,
+    correctAnswers: Int,
+    wrongAnswers: Int,
     onStartStudy: () -> Unit
 ) {
     val streakStats = remember(completedDates) {
@@ -417,6 +455,14 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        item {
+            ProgressStatsCard(
+                learnedCount = learnedCount,
+                correctAnswers = correctAnswers,
+                wrongAnswers = wrongAnswers
+            )
         }
 
         item {
@@ -543,8 +589,31 @@ fun DictionaryScreen(
     words: List<WordEntity>,
     query: String,
     onQueryChange: (String) -> Unit,
-    padding: PaddingValues
+    padding: PaddingValues,
+    favoriteIds: Set<String>,
+    onFavoriteToggle: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    var favoritesOnly by remember { mutableStateOf(false) }
+
+    val tts = remember {
+        TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Забони англисӣ барои талаффуз
+            }
+        }
+    }
+
+    DisposableEffect(tts) {
+        onDispose { tts.shutdown() }
+    }
+
+    val visibleWords = if (favoritesOnly) {
+        words.filter { it.id in favoriteIds }
+    } else {
+        words
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -571,26 +640,43 @@ fun DictionaryScreen(
             singleLine = true
         )
 
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            "Ёфт шуд: ${words.size}",
-            color = Muted,
-            fontSize = 13.sp
-        )
-
         Spacer(Modifier.height(8.dp))
 
-        if (words.isEmpty()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                "Калима ёфт нашуд. Баъдтар файлҳои навро ворид кун.",
+                "Ёфт шуд: ${visibleWords.size}",
+                color = Muted,
+                fontSize = 13.sp
+            )
+
+            TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                Icon(
+                    if (favoritesOnly) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = null,
+                    tint = Purple
+                )
+                Text(
+                    if (favoritesOnly) "Ҳама" else "Дӯстдоштаҳо",
+                    color = Purple
+                )
+            }
+        }
+
+        if (visibleWords.isEmpty()) {
+            Text(
+                if (favoritesOnly) "Ҳоло калимаи дӯстдошта нест."
+                else "Калима ёфт нашуд.",
                 color = Muted
             )
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(words, key = { it.id }) { word ->
+                items(visibleWords, key = { it.id }) { word ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -599,23 +685,56 @@ fun DictionaryScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(
-                                word.english,
-                                color = Purple,
-                                fontSize = 19.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    word.english,
+                                    color = Purple,
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                IconButton(onClick = {
+                                    tts.language = Locale.US
+                                    tts.speak(
+                                        word.english,
+                                        TextToSpeech.QUEUE_FLUSH,
+                                        null,
+                                        word.id
+                                    )
+                                }) {
+                                    Icon(
+                                        Icons.Default.VolumeUp,
+                                        contentDescription = "Талаффуз",
+                                        tint = Purple
+                                    )
+                                }
+
+                                IconButton(onClick = {
+                                    onFavoriteToggle(word.id)
+                                }) {
+                                    Icon(
+                                        if (word.id in favoriteIds)
+                                            Icons.Default.Star
+                                        else Icons.Default.StarBorder,
+                                        contentDescription = "Дӯстдошта",
+                                        tint = Purple
+                                    )
+                                }
+                            }
+
                             Spacer(Modifier.height(4.dp))
                             Text(word.tajik, color = TextWhite, fontSize = 16.sp)
                             Text(word.russian, color = Muted, fontSize = 14.sp)
+
                             if (word.example.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))
-                                Text(
-                                    word.example,
-                                    color = Muted,
-                                    fontSize = 13.sp
-                                )
+                                Text(word.example, color = Muted, fontSize = 13.sp)
                             }
+
                             Text(
                                 "${word.category} • ${word.level}",
                                 color = Purple,
@@ -630,39 +749,60 @@ fun DictionaryScreen(
 }
 
 @Composable
-fun LessonsScreen(padding: PaddingValues) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text(
-            "Дарсҳо",
-            color = TextWhite,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold
-        )
+private fun ProgressStatsCard(
+    learnedCount: Int,
+    correctAnswers: Int,
+    wrongAnswers: Int
+) {
+    val total = correctAnswers + wrongAnswers
+    val accuracy = if (total > 0) correctAnswers * 100 / total else 0
 
-        listOf(
-            "Beginner — Оғозӣ",
-            "Intermediate — Миёна",
-            "Advanced — Пешрафта"
-        ).forEach {
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable {},
-                colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Омори пешрафт",
+                color = TextWhite,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.School, contentDescription = null, tint = Purple)
-                    Spacer(Modifier.width(14.dp))
-                    Text(it, color = TextWhite, fontWeight = FontWeight.Bold)
+                Column {
+                    Text("$learnedCount", color = Purple, fontSize = 23.sp)
+                    Text("Азёдшуда", color = Muted, fontSize = 12.sp)
+                }
+                Column {
+                    Text("$total", color = Purple, fontSize = 23.sp)
+                    Text("Ҷавобҳо", color = Muted, fontSize = 12.sp)
+                }
+                Column {
+                    Text("$accuracy%", color = Purple, fontSize = 23.sp)
+                    Text("Дуруст", color = Muted, fontSize = 12.sp)
                 }
             }
+
+            LinearProgressIndicator(
+                progress = { accuracy / 100f },
+                modifier = Modifier.fillMaxWidth(),
+                color = Purple,
+                trackColor = Background
+            )
+
+            Text(
+                "Дуруст: $correctAnswers  •  Нодуруст: $wrongAnswers",
+                color = Muted,
+                fontSize = 12.sp
+            )
         }
     }
 }
