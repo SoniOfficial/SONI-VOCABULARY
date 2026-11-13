@@ -5,6 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -76,7 +78,14 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
     }
 
     Column(
-        Modifier.fillMaxSize().padding(padding).padding(16.dp)
+        Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp)
+            .then(
+                if (page == "topics" && selectedCategory.isNotEmpty()) Modifier
+                else Modifier.verticalScroll(rememberScrollState())
+            )
     ) {
         Text(
             "Маркази асбобҳо",
@@ -224,7 +233,7 @@ private fun FeatureButton(title: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6F42C1))
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9B72FF))
     ) {
         Text(title)
     }
