@@ -196,7 +196,7 @@ fun VocabularyApp() {
                             "Асосӣ" to Icons.Default.Home,
                             "Луғат" to Icons.Default.MenuBook,
                             "Дарсҳо" to Icons.Default.School,
-                            "V1.6" to Icons.Default.Quiz,
+                            "Асбобҳо" to Icons.Default.Build,
                             "Такрор" to Icons.Default.Refresh,
                             "Танзимот" to Icons.Default.Settings
                         )
@@ -443,30 +443,72 @@ fun HomeScreen(
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(20.dp)) {
-                    Text("Салом! 👋", color = Muted, fontSize = 15.sp)
-                    Spacer(Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "✦ SMART LEARNING",
+                            color = Purple,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Surface(
+                            color = Purple.copy(alpha = 0.16f),
+                            shape = RoundedCornerShape(50.dp)
+                        ) {
+                            Text(
+                                "🔥 $currentStreak рӯз",
+                                color = TextWhite,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     Text(
-                        "Имрӯз забони нав омӯз!",
+                        "Салом! 👋",
+                        color = Muted,
+                        fontSize = 15.sp
+                    )
+
+                    Text(
+                        "Имрӯз як қадам ба пеш!",
                         color = TextWhite,
-                        fontSize = 23.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 32.sp
                     )
-                    Spacer(Modifier.height(18.dp))
+
                     Text(
-                        "Ҳар рӯз каме омӯз — натиҷаи калон мегирӣ.",
-                        color = Muted
+                        "Калимаҳои нав омӯз, дониши худро зиёд кун ва ҳар рӯз пешравӣ намо.",
+                        color = Muted,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp
                     )
-                    Spacer(Modifier.height(18.dp))
+
                     Button(
                         onClick = onStartStudy,
                         colors = ButtonDefaults.buttonColors(containerColor = Purple),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().height(52.dp)
                     ) {
-                        Text("Оғози омӯзиш", color = Color.White)
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Оғози омӯзиш",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -492,8 +534,8 @@ fun HomeScreen(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatCard("$wordCount", "Калима", Modifier.weight(1f))
-                StatCard("0", "Ҷумла", Modifier.weight(1f))
-                StatCard("$currentStreak", "Streak", Modifier.weight(1f))
+                StatCard("$correctAnswers", "Ҷавоби дуруст", Modifier.weight(1f))
+                StatCard("$currentStreak", "Рӯзи пайдарпай", Modifier.weight(1f))
             }
         }
 
@@ -554,20 +596,58 @@ fun SessionCard(number: Int, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.MenuBook, contentDescription = null, tint = Purple)
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Машғулияти $number", color = TextWhite, fontWeight = FontWeight.Bold)
-                Text("Омӯзиши калимаҳо ва ҷумлаҳо", color = Muted, fontSize = 12.sp)
+            Surface(
+                color = Purple.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier.size(50.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        "%02d".format(number),
+                        color = Purple,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Muted)
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Машғулияти $number",
+                    color = TextWhite,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Омӯзиши калимаҳо ва ҷумлаҳо",
+                    color = Muted,
+                    fontSize = 12.sp
+                )
+            }
+
+            Surface(
+                color = Purple.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Icon(
+                    Icons.Default.ArrowForward,
+                    contentDescription = "Оғоз",
+                    tint = Purple,
+                    modifier = Modifier.padding(9.dp).size(19.dp)
+                )
+            }
         }
     }
 }

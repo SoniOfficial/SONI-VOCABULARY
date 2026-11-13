@@ -79,7 +79,7 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
         Modifier.fillMaxSize().padding(padding).padding(16.dp)
     ) {
         Text(
-            "Имкониятҳои нав V1.6",
+            "Маркази асбобҳо",
             color = Color.White,
             fontSize = 23.sp
         )
