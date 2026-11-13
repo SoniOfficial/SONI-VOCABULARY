@@ -2,7 +2,7 @@
 <resources>
     <style name="AppTheme" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#100B20</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/lexio_splash</item>
         <item name="postSplashScreenTheme">@style/AppTheme.Normal</item>
     </style>
 
