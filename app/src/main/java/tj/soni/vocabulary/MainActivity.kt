@@ -983,7 +983,7 @@ fun ProfileScreen(
         SettingsRow(
             icon = Icons.Default.Info,
             title = "Дар бораи барнома",
-            subtitle = "SONI VOCABULARY · Версия 1.8"
+            subtitle = "SONI VOCABULARY · Версия 1.9"
         ) {
             showAbout = true
         }
@@ -994,7 +994,7 @@ fun ProfileScreen(
                 title = { Text("SONI VOCABULARY") },
                 text = {
                     Text(
-                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.8\nPackage: tj.soni.vocabulary"
+                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.9\nPackage: tj.soni.vocabulary"
                     )
                 },
                 confirmButton = {
