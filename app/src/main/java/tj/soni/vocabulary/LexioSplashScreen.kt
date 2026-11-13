@@ -21,20 +21,34 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun LexioSplashScreen() {
+    var started by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        started = true
+    }
+
     val logoScale by animateFloatAsState(
-        targetValue = 1f,
+        targetValue = if (started) 1f else 0.72f,
         animationSpec = tween(650),
         label = "logoScale"
     )
+
     val logoAlpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(550),
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(450),
         label = "logoAlpha"
     )
+
     val textAlpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(650, delayMillis = 150),
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(650, delayMillis = 180),
         label = "textAlpha"
+    )
+
+    val textScale by animateFloatAsState(
+        targetValue = if (started) 1f else 0.75f,
+        animationSpec = tween(650, delayMillis = 180),
+        label = "textScale"
     )
 
     Box(
@@ -44,28 +58,29 @@ fun LexioSplashScreen() {
         contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = R.mipmap.ic_launcher),
-                contentDescription = "LEXIO Logo",
+                painter = painterResource(R.mipmap.ic_launcher_round),
+                contentDescription = "LEXIO",
                 modifier = Modifier
-                    .size(112.dp)
+                    .size(104.dp)
                     .scale(logoScale)
                     .alpha(logoAlpha),
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = "lexio",
                 fontFamily = FontFamily.Cursive,
                 fontWeight = FontWeight.Bold,
-                fontSize = 48.sp,
-                color = Color(0xFFD8C3FF),
-                modifier = Modifier.alpha(textAlpha)
+                fontSize = 50.sp,
+                color = Color(0xFFE0CCFF),
+                modifier = Modifier
+                    .alpha(textAlpha)
+                    .scale(textScale)
             )
         }
     }
