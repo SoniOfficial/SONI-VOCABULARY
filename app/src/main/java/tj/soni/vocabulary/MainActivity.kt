@@ -22,6 +22,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.stickyHeader
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -409,6 +410,7 @@ private fun StreakCalendarCard(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     language: String,
@@ -434,16 +436,27 @@ fun HomeScreen(
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        stickyHeader {
+            Surface(
+                color = Background,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "lexio",
+                        color = Purple,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive
+                    )
+                    LanguageMenu(language, onLanguageChange)
                 }
-                LanguageMenu(language, onLanguageChange)
             }
         }
 
@@ -663,44 +676,53 @@ fun SessionCard(number: Int, onClick: () -> Unit) {
 fun LanguageMenu(language: String, onChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
+    val flag = when (language) {
+        "Тоҷикӣ" -> "🇹🇯"
+        "Русский" -> "🇷🇺"
+        "English" -> "🇬🇧"
+        else -> "🌐"
+    }
+
     Box {
-        Surface(
-            color = Purple.copy(alpha = 0.14f),
-            shape = RoundedCornerShape(50.dp),
-            modifier = Modifier.clickable { expanded = true }
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Text("🌐", fontSize = 16.sp)
-                Text(
-                    language,
-                    color = TextWhite,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Icon(
-                    Icons.Default.ArrowDropDown,
-                    contentDescription = "Интихоби забон",
-                    tint = Purple
-                )
-            }
-        }
+        Text(
+            text = flag,
+            fontSize = 25.sp,
+            modifier = Modifier
+                .clickable { expanded = true }
+                .padding(6.dp)
+        )
 
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             listOf("Тоҷикӣ", "Русский", "English").forEach { item ->
+                val itemFlag = when (item) {
+                    "Тоҷикӣ" -> "🇹🇯"
+                    "Русский" -> "🇷🇺"
+                    else -> "🇬🇧"
+                }
+
                 DropdownMenuItem(
                     text = {
-                        Text(
-                            text = if (language == item) "✓  $item" else item,
-                            color = TextWhite,
-                            fontWeight = if (language == item) FontWeight.Bold else FontWeight.Normal
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(itemFlag, fontSize = 21.sp)
+                            Text(
+                                item,
+                                color = TextWhite,
+                                fontWeight = if (language == item) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (language == item) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Purple
+                                )
+                            }
+                        }
                     },
                     onClick = {
                         onChange(item)
