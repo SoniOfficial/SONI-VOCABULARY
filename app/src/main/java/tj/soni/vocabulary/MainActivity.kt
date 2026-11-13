@@ -31,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -331,7 +332,7 @@ private fun StreakCalendarCard(
     val totalCells = ((firstDayOffset + month.lengthOfMonth() + 6) / 7) * 7
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         shape = RoundedCornerShape(22.dp)
     ) {
@@ -583,7 +584,7 @@ fun HomeScreen(
 @Composable
 fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clip(RoundedCornerShape(18.dp)),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         shape = RoundedCornerShape(18.dp)
     ) {
@@ -885,7 +886,7 @@ private fun ProgressStatsCard(
     val accuracy = if (total > 0) correctAnswers * 100 / total else 0
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         shape = RoundedCornerShape(20.dp)
     ) {
