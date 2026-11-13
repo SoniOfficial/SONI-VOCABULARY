@@ -663,20 +663,46 @@ fun LanguageMenu(language: String, onChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box {
-        OutlinedButton(onClick = { expanded = true }) {
-            Text(language, color = TextWhite)
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Purple)
+        Surface(
+            color = Purple.copy(alpha = 0.14f),
+            shape = RoundedCornerShape(50.dp),
+            modifier = Modifier.clickable { expanded = true }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Text("🌐", fontSize = 16.sp)
+                Text(
+                    language,
+                    color = TextWhite,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = "Интихоби забон",
+                    tint = Purple
+                )
+            }
         }
 
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            listOf("Тоҷикӣ", "Русский", "English").forEach {
+            listOf("Тоҷикӣ", "Русский", "English").forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(it) },
+                    text = {
+                        Text(
+                            text = if (language == item) "✓  $item" else item,
+                            color = TextWhite,
+                            fontWeight = if (language == item) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
                     onClick = {
-                        onChange(it)
+                        onChange(item)
                         expanded = false
                     }
                 )
