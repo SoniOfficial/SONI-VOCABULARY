@@ -441,7 +441,7 @@ fun HomeScreen(
             ) {
                 Column {
                     Text("SONI", color = Purple, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("VOCABULARY", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
                 }
                 LanguageMenu(language, onLanguageChange)
             }
@@ -572,7 +572,7 @@ fun HomeScreen(
 
         item {
             Text(
-                "© 2026 SONI VOCABULARY",
+                "© 2026 LEXIO",
                 color = Muted,
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 12.sp
