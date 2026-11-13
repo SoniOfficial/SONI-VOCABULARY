@@ -7,7 +7,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="SONI VOCABULARY"
+        android:label="LEXIO"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 

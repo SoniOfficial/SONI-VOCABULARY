@@ -76,7 +76,18 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            VocabularyApp()
+            var showSplash by remember { mutableStateOf(true) }
+
+            LaunchedEffect(Unit) {
+                delay(2400)
+                showSplash = false
+            }
+
+            if (showSplash) {
+                LexioSplashScreen()
+            } else {
+                VocabularyApp()
+            }
         }
     }
 }
@@ -1063,7 +1074,7 @@ fun ProfileScreen(
         SettingsRow(
             icon = Icons.Default.Info,
             title = "Дар бораи барнома",
-            subtitle = "SONI VOCABULARY · Версия 1.9"
+            subtitle = "LEXIO · Версия 1.9"
         ) {
             showAbout = true
         }
@@ -1071,10 +1082,10 @@ fun ProfileScreen(
         if (showAbout) {
             AlertDialog(
                 onDismissRequest = { showAbout = false },
-                title = { Text("SONI VOCABULARY") },
+                title = { Text("LEXIO") },
                 text = {
                     Text(
-                        "Барномаи омӯзиши забонҳо.\n\nВерсия: 1.9\nPackage: tj.soni.vocabulary"
+                        "LEXIO — Барномаи омӯзиши забонҳо.\n\nВерсия: 1.9\nPackage: tj.soni.vocabulary"
                     )
                 },
                 confirmButton = {
