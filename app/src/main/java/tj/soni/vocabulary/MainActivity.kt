@@ -440,7 +440,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("SONI", color = Purple, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
                     Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
                 }
                 LanguageMenu(language, onLanguageChange)
@@ -969,7 +969,7 @@ fun ProfileScreen(
         SettingsRow(
             icon = Icons.Default.Alarm,
             title = "Танзими ҳушдорҳо",
-            subtitle = "Иҷозатҳо ва танзимоти ҳушдорҳои SONI"
+            subtitle = "Иҷозатҳо ва танзимоти ҳушдорҳои LEXIO"
         ) {
             openPhoneSettings(
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -1011,7 +1011,7 @@ fun ProfileScreen(
         SettingsRow(
             icon = Icons.Default.Security,
             title = "Иҷозатҳои барнома",
-            subtitle = "Идора кардани иҷозатҳои SONI"
+            subtitle = "Идора кардани иҷозатҳои LEXIO"
         ) {
             openPhoneSettings(
                 Intent(

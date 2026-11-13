@@ -81,18 +81,18 @@ object StudyAlarmManager {
         try {
             val alarmInfo = AlarmManager.AlarmClockInfo(millis, showIntent)
             alarmManager.setAlarmClock(alarmInfo, pending)
-            Log.i("SONI_ALARM", "AlarmClock set: id=$id time=$target")
+            Log.i("LEXIO_ALARM", "AlarmClock set: id=$id time=$target")
         } catch (e: Exception) {
-            Log.e("SONI_ALARM", "AlarmClock failed for id=$id", e)
+            Log.e("LEXIO_ALARM", "AlarmClock failed for id=$id", e)
             try {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     millis,
                     pending
                 )
-                Log.i("SONI_ALARM", "Exact fallback set: id=$id")
+                Log.i("LEXIO_ALARM", "Exact fallback set: id=$id")
             } catch (error: Exception) {
-                Log.e("SONI_ALARM", "Fallback failed for id=$id", error)
+                Log.e("LEXIO_ALARM", "Fallback failed for id=$id", error)
             }
         }
     }
@@ -201,7 +201,7 @@ object StudyAlarmManager {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("SONI VOCABULARY")
+            .setContentTitle("LEXIO")
             .setContentText("Вақти омӯзиш расид. Барои оғоз пахш кунед.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -223,7 +223,7 @@ object StudyAlarmManager {
                 "Огоҳиномаҳои омӯзиш",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Вақти машғулиятҳои SONI VOCABULARY"
+                description = "Вақти машғулиятҳои LEXIO"
             }
 
             val manager = context.getSystemService(
