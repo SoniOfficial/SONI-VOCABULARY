@@ -441,7 +441,6 @@ fun HomeScreen(
             ) {
                 Column {
                     Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
-                    Text("lexio", color = Purple, fontSize = 30.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Cursive)
                 }
                 LanguageMenu(language, onLanguageChange)
             }
