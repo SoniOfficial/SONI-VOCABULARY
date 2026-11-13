@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
         ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         if (
@@ -77,15 +77,19 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        var keepSplash = true
-        splashScreen.setKeepOnScreenCondition { keepSplash }
-
         setContent {
+            var showSplash by remember { mutableStateOf(true) }
+
             LaunchedEffect(Unit) {
-                delay(1800)
-                keepSplash = false
+                delay(1000)
+                showSplash = false
             }
-            VocabularyApp()
+
+            if (showSplash) {
+                LexioSplashScreen()
+            } else {
+                VocabularyApp()
+            }
         }
     }
 }
