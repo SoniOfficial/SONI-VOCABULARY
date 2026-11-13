@@ -16,6 +16,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
         ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
         if (
@@ -75,19 +77,15 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        setContent {
-            var showSplash by remember { mutableStateOf(true) }
+        var keepSplash = true
+        splashScreen.setKeepOnScreenCondition { keepSplash }
 
+        setContent {
             LaunchedEffect(Unit) {
                 delay(1800)
-                showSplash = false
+                keepSplash = false
             }
-
-            if (showSplash) {
-                LexioSplashScreen()
-            } else {
-                VocabularyApp()
-            }
+            VocabularyApp()
         }
     }
 }
