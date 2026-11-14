@@ -123,7 +123,39 @@ fun VocabularyApp() {
         .getTotalWrongAnswers().collectAsState(initial = 0)
 
     val hasActiveStudy = schedules.any { it.active }
-    var selectedTab b    LaunchedEffect(database) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(database) {
+        val dao = database.studyScheduleDao()
+        val existingIds = dao.getAll().map { it.id }.toSet()
+
+        val defaults = listOf(
+            StudyScheduleEntity(id = 1, startTime = "09:00"),
+            StudyScheduleEntity(id = 2, startTime = "14:00"),
+            StudyScheduleEntity(id = 3, startTime = "18:00")
+        )
+
+        val missing = defaults.filter { it.id !in existingIds }
+
+        if (missing.isNotEmpty()) {
+            dao.saveAll(missing)
+        }
+
+        StudyAlarmManager.scheduleAll(context)
+    }
+
+    LaunchedEffect(hasActiveStudy) {
+        if (hasActiveStudy) {
+            selectedTab = 2
+        }
+    }
+
+    val importer = remember { ContentImporter(context, database) }
+    var language by remember { mutableStateOf("Тоҷикӣ") }
+    var searchQuery by remember { mutableStateOf("") }
+    var words by remember { mutableStateOf(emptyList<WordEntity>()) }
+
+    LaunchedEffect(database) {
         val preferences = context.getSharedPreferences(
             "soni_content_preferences",
             android.content.Context.MODE_PRIVATE
@@ -156,12 +188,11 @@ fun VocabularyApp() {
                     .putInt("content_version", currentVersion)
                     .apply()
             } catch (e: Exception) {
-                android.util.Log.e("LEXIO_CONTENT", "Starter content import failed", e)
-            }
-        }
-    }
-
-ply()
+                android.util.Log.e(
+                    "LEXIO_CONTENT",
+                    "Starter content import failed",
+                    e
+                )
             }
         }
     }
