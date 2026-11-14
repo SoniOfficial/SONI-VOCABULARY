@@ -1,47 +1,62 @@
 [
   {
-    "id": "en_001",
+    "id": "starter_hello",
     "english": "Hello",
     "tajik": "Салом",
     "russian": "Привет",
+    "chinese": "你好",
+    "chinesePinyin": "Nǐ hǎo",
+    "chinesePronunciation": "Ни хао",
     "category": "Greetings",
     "level": "Beginner",
-    "example": "Hello, how are you?"
+    "example": "Hello, my friend."
   },
   {
-    "id": "en_002",
+    "id": "starter_book",
     "english": "Book",
     "tajik": "Китоб",
     "russian": "Книга",
-    "category": "Education",
+    "chinese": "书",
+    "chinesePinyin": "Shū",
+    "chinesePronunciation": "Шу",
+    "category": "Objects",
     "level": "Beginner",
     "example": "I read a book."
   },
   {
-    "id": "en_003",
-    "english": "School",
-    "tajik": "Мактаб",
-    "russian": "Школа",
-    "category": "Education",
+    "id": "starter_water",
+    "english": "Water",
+    "tajik": "Об",
+    "russian": "Вода",
+    "chinese": "水",
+    "chinesePinyin": "Shuǐ",
+    "chinesePronunciation": "Шуй",
+    "category": "Food and drink",
     "level": "Beginner",
-    "example": "I go to school."
+    "example": "I drink water."
   },
   {
-    "id": "en_004",
-    "english": "Beautiful",
-    "tajik": "Зебо",
-    "russian": "Красивый",
-    "category": "Adjectives",
+    "id": "starter_house",
+    "english": "House",
+    "tajik": "Хона",
+    "russian": "Дом",
+    "chinese": "房子",
+    "chinesePinyin": "Fángzi",
+    "chinesePronunciation": "Фан-зы",
+    "category": "Places",
     "level": "Beginner",
-    "example": "This is a beautiful day."
+    "example": "This is my house."
   },
   {
-    "id": "en_005",
-    "english": "Learn",
-    "tajik": "Омӯхтан",
-    "russian": "Учить",
-    "category": "Education",
+    "id": "starter_friend",
+    "english": "Friend",
+    "tajik": "Дӯст",
+    "russian": "Друг",
+    "chinese": "朋友",
+    "chinesePinyin": "Péngyou",
+    "chinesePronunciation": "Пэн-йоу",
+    "category": "People",
     "level": "Beginner",
-    "example": "I learn English every day."
+    "example": "You are my friend."
   }
 ]

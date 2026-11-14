@@ -22,6 +22,9 @@ interface SentenceDao {
         WHERE english LIKE '%' || :query || '%'
         OR tajik LIKE '%' || :query || '%'
         OR russian LIKE '%' || :query || '%'
+        OR chinese LIKE '%' || :query || '%'
+        OR chinesePinyin LIKE '%' || :query || '%'
+        OR chinesePronunciation LIKE '%' || :query || '%'
         LIMIT 100
     """)
     fun searchSentences(query: String): Flow<List<SentenceEntity>>

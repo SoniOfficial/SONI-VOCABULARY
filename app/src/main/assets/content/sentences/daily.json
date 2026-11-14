@@ -1,34 +1,57 @@
 [
   {
-    "id": "daily_001",
-    "english": "Good morning!",
-    "tajik": "Субҳ ба хайр!",
-    "russian": "Доброе утро!",
+    "id": "starter_sentence_1",
+    "english": "Hello, how are you?",
+    "tajik": "Салом, чӣ хелӣ?",
+    "russian": "Привет, как дела?",
+    "chinese": "你好，你好吗？",
+    "chinesePinyin": "Nǐ hǎo, nǐ hǎo ma?",
+    "chinesePronunciation": "Ни хао, ни хао ма",
     "level": "Beginner",
-    "category": "Daily Life"
+    "category": "Greetings"
   },
   {
-    "id": "daily_002",
-    "english": "How are you?",
-    "tajik": "Шумо чӣ хел ҳастед?",
-    "russian": "Как дела?",
+    "id": "starter_sentence_2",
+    "english": "I read a book.",
+    "tajik": "Ман китоб мехонам.",
+    "russian": "Я читаю книгу.",
+    "chinese": "我读书。",
+    "chinesePinyin": "Wǒ dú shū.",
+    "chinesePronunciation": "Во ду шу",
     "level": "Beginner",
-    "category": "Conversation"
+    "category": "Study"
   },
   {
-    "id": "daily_003",
-    "english": "Thank you very much.",
-    "tajik": "Ташаккури зиёд.",
-    "russian": "Большое спасибо.",
+    "id": "starter_sentence_3",
+    "english": "I drink water.",
+    "tajik": "Ман об менӯшам.",
+    "russian": "Я пью воду.",
+    "chinese": "我喝水。",
+    "chinesePinyin": "Wǒ hē shuǐ.",
+    "chinesePronunciation": "Во хэ шуй",
     "level": "Beginner",
-    "category": "Conversation"
+    "category": "Daily life"
   },
   {
-    "id": "daily_004",
-    "english": "I want to learn English.",
-    "tajik": "Ман мехоҳам забони англисиро омӯзам.",
-    "russian": "Я хочу изучать английский язык.",
+    "id": "starter_sentence_4",
+    "english": "This is my house.",
+    "tajik": "Ин хонаи ман аст.",
+    "russian": "Это мой дом.",
+    "chinese": "这是我的房子。",
+    "chinesePinyin": "Zhè shì wǒ de fángzi.",
+    "chinesePronunciation": "Ҷэ шы во дэ фан-зы",
     "level": "Beginner",
-    "category": "Education"
+    "category": "Places"
+  },
+  {
+    "id": "starter_sentence_5",
+    "english": "You are my friend.",
+    "tajik": "Ту дӯсти ман ҳастӣ.",
+    "russian": "Ты мой друг.",
+    "chinese": "你是我的朋友。",
+    "chinesePinyin": "Nǐ shì wǒ de péngyou.",
+    "chinesePronunciation": "Ни шы во дэ пэн-йоу",
+    "level": "Beginner",
+    "category": "People"
   }
 ]

@@ -1,7 +1,6 @@
 package tj.soni.vocabulary.data.importer
 
 import android.content.Context
-import androidx.room.withTransaction
 import tj.soni.vocabulary.data.database.AppDatabase
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.database.SentenceEntity
@@ -63,8 +62,11 @@ class ContentImporter(
                         val english = item.optString("english").trim()
                         val tajik = item.optString("tajik").trim()
                         val russian = item.optString("russian").trim()
+                        val chinese = item.optString("chinese").trim()
+                        val chinesePinyin = item.optString("chinesePinyin").trim()
+                        val chinesePronunciation = item.optString("chinesePronunciation").trim()
 
-                        if (id.isBlank() || english.isBlank()) {
+                        if (id.isBlank() || listOf(english, tajik, russian, chinese).all { it.isBlank() }) {
                             failed++
                             continue
                         }
@@ -75,6 +77,9 @@ class ContentImporter(
                                 english = english,
                                 tajik = tajik,
                                 russian = russian,
+                                chinese = chinese,
+                                chinesePinyin = chinesePinyin,
+                                chinesePronunciation = chinesePronunciation,
                                 category = item.optString("category", "General"),
                                 level = item.optString("level", "Beginner"),
                                 example = item.optString("example", "")
@@ -124,8 +129,11 @@ class ContentImporter(
                         val english = item.optString("english").trim()
                         val tajik = item.optString("tajik").trim()
                         val russian = item.optString("russian").trim()
+                        val chinese = item.optString("chinese").trim()
+                        val chinesePinyin = item.optString("chinesePinyin").trim()
+                        val chinesePronunciation = item.optString("chinesePronunciation").trim()
 
-                        if (id.isBlank() || english.isBlank()) {
+                        if (id.isBlank() || listOf(english, tajik, russian, chinese).all { it.isBlank() }) {
                             failed++
                             continue
                         }
@@ -136,6 +144,9 @@ class ContentImporter(
                                 english = english,
                                 tajik = tajik,
                                 russian = russian,
+                                chinese = chinese,
+                                chinesePinyin = chinesePinyin,
+                                chinesePronunciation = chinesePronunciation,
                                 level = item.optString("level", "Beginner"),
                                 category = item.optString("category", "General")
                             )
