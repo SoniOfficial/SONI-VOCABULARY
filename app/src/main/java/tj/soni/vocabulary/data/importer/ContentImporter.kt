@@ -1,7 +1,6 @@
 package tj.soni.vocabulary.data.importer
 
 import android.content.Context
-import androidx.room.withTransaction
 import tj.soni.vocabulary.data.database.AppDatabase
 import tj.soni.vocabulary.data.database.WordEntity
 import tj.soni.vocabulary.data.database.SentenceEntity

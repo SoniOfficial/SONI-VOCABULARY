@@ -1,4 +1,6 @@
 package tj.soni.vocabulary
+
+import androidx.room.withTransaction
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -121,59 +123,45 @@ fun VocabularyApp() {
         .getTotalWrongAnswers().collectAsState(initial = 0)
 
     val hasActiveStudy = schedules.any { it.active }
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(database) {
-        val dao = database.studyScheduleDao()
-        val existingIds = dao.getAll().map { it.id }.toSet()
-
-        val defaults = listOf(
-            StudyScheduleEntity(id = 1, startTime = "09:00"),
-            StudyScheduleEntity(id = 2, startTime = "14:00"),
-            StudyScheduleEntity(id = 3, startTime = "18:00")
-        )
-
-        val missing = defaults.filter { it.id !in existingIds }
-
-        if (missing.isNotEmpty()) {
-            dao.saveAll(missing)
-        }
-
-        StudyAlarmManager.scheduleAll(context)
-    }
-
-    LaunchedEffect(hasActiveStudy) {
-        if (hasActiveStudy) {
-            selectedTab = 2
-        }
-    }
-
-    val importer = remember { ContentImporter(context, database) }
-    var language by remember { mutableStateOf("Тоҷикӣ") }
-    var searchQuery by remember { mutableStateOf("") }
-    var words by remember { mutableStateOf(emptyList<WordEntity>()) }
-
-    LaunchedEffect(database) {
+    var selectedTab b    LaunchedEffect(database) {
         val preferences = context.getSharedPreferences(
             "soni_content_preferences",
             android.content.Context.MODE_PRIVATE
         )
-
+        val currentVersion = 2
         val savedVersion = preferences.getInt("content_version", 0)
-        val currentVersion = 1
 
         if (savedVersion < currentVersion) {
-            val wordResult = importer.importWordsFromAssets(
-                "content/words/english.json"
-            )
-            val sentenceResult = importer.importSentencesFromAssets(
-                "content/sentences/daily.json"
-            )
+            try {
+                database.withTransaction {
+                    database.wordDao().deleteAll()
+                    database.sentenceDao().deleteAll()
 
-            if (wordResult.failed == 0 && sentenceResult.failed == 0) {
+                    val wordResult = importer.importWordsFromAssets(
+                        "content/words/english.json"
+                    )
+                    val sentenceResult = importer.importSentencesFromAssets(
+                        "content/sentences/daily.json"
+                    )
+
+                    check(wordResult.failed == 0 && wordResult.imported == 5) {
+                        "Word import failed: ${wordResult.message}"
+                    }
+                    check(sentenceResult.failed == 0 && sentenceResult.imported == 5) {
+                        "Sentence import failed: ${sentenceResult.message}"
+                    }
+                }
+
                 preferences.edit()
                     .putInt("content_version", currentVersion)
                     .apply()
+            } catch (e: Exception) {
+                android.util.Log.e("LEXIO_CONTENT", "Starter content import failed", e)
+            }
+        }
+    }
+
+ply()
             }
         }
     }
