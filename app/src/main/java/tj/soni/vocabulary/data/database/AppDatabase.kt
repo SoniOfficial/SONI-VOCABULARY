@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         StudyScheduleEntity::class,
         FavoriteWordEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -120,6 +120,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE words ADD COLUMN chinese TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE words ADD COLUMN chinesePinyin TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE words ADD COLUMN chinesePronunciation TEXT NOT NULL DEFAULT ''")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_words_chinese ON words(chinese)")
+
+                db.execSQL("ALTER TABLE sentences ADD COLUMN chinese TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE sentences ADD COLUMN chinesePinyin TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE sentences ADD COLUMN chinesePronunciation TEXT NOT NULL DEFAULT ''")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sentences_chinese ON sentences(chinese)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -131,7 +145,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_1_2,
                         MIGRATION_2_3,
                         MIGRATION_3_4,
-                        MIGRATION_4_5
+                        MIGRATION_4_5,
+                        MIGRATION_5_6
                     )
                     .build()
 

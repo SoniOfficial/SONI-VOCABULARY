@@ -744,6 +744,8 @@ fun DictionaryScreen(
 ) {
     val context = LocalContext.current
     var favoritesOnly by remember { mutableStateOf(false) }
+    val directionState = rememberLanguageDirection()
+    val direction = directionState.value
 
     val tts = remember {
         TextToSpeech(context) { status ->
@@ -777,6 +779,8 @@ fun DictionaryScreen(
         )
 
         Spacer(Modifier.height(16.dp))
+
+        LanguageDirectionSelector(direction) { directionState.value = it }
 
         OutlinedTextField(
             value = query,
@@ -839,7 +843,7 @@ fun DictionaryScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    word.english,
+                                    wordLanguageText(word, direction.source),
                                     color = Purple,
                                     fontSize = 19.sp,
                                     fontWeight = FontWeight.Bold,
@@ -847,9 +851,15 @@ fun DictionaryScreen(
                                 )
 
                                 IconButton(onClick = {
-                                    tts.language = Locale.US
+                                    val locale = when (direction.source) {
+                                        "zh" -> "zh-CN"
+                                        "tg" -> "tg-TJ"
+                                        "ru" -> "ru-RU"
+                                        else -> "en-US"
+                                    }
+                                    tts.language = Locale.forLanguageTag(locale)
                                     tts.speak(
-                                        word.english,
+                                        wordSpeechText(word, direction.source),
                                         TextToSpeech.QUEUE_FLUSH,
                                         null,
                                         word.id
@@ -876,8 +886,7 @@ fun DictionaryScreen(
                             }
 
                             Spacer(Modifier.height(4.dp))
-                            Text(word.tajik, color = TextWhite, fontSize = 16.sp)
-                            Text(word.russian, color = Muted, fontSize = 14.sp)
+                            Text(wordLanguageText(word, direction.target), color = TextWhite, fontSize = 16.sp)
 
                             if (word.example.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))

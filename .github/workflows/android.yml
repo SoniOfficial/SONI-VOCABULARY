@@ -8,6 +8,7 @@ on:
       - v1.2
       - v1.3
       - v1.7
+      - v1.8
   pull_request:
     branches:
       - main
@@ -15,6 +16,7 @@ on:
       - v1.2
       - v1.3
       - v1.7
+      - v1.8
   workflow_dispatch:
 
 permissions:

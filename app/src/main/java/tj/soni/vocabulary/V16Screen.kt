@@ -33,6 +33,13 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
     val words by database.wordDao().getAllWords()
         .collectAsState(initial = emptyList())
 
+    val directionState = rememberLanguageDirection()
+    val direction = directionState.value
+    val eligibleWords = words.filter {
+        wordLanguageText(it, direction.source).isNotBlank() &&
+            wordLanguageText(it, direction.target).isNotBlank()
+    }
+
     var page by remember { mutableStateOf("home") }
     var selectedCategory by remember { mutableStateOf("") }
     var questions by remember { mutableStateOf(emptyList<WordEntity>()) }
@@ -94,10 +101,15 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
         )
         Spacer(Modifier.height(16.dp))
 
+        if (page != "quiz") {
+            LanguageDirectionSelector(direction) { directionState.value = it }
+            Spacer(Modifier.height(8.dp))
+        }
+
         when (page) {
             "home" -> {
                 FeatureButton("📝 Тест ва имтиҳон") {
-                    questions = words.shuffled().take(10)
+                    questions = eligibleWords.shuffled().take(10)
                     questionIndex = 0
                     score = 0
                     selectedAnswer = null
@@ -116,7 +128,7 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                 Text("Тест ва имтиҳон", color = Color.White, fontSize = 20.sp)
                 Spacer(Modifier.height(12.dp))
 
-                if (words.size < 2) {
+                if (eligibleWords.size < 2) {
                     Text("Барои тест ҳадди ақал 2 калима лозим аст.", color = Color.White)
                 } else if (finished || questionIndex >= questions.size) {
                     Text(
@@ -125,7 +137,7 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                         fontSize = 24.sp
                     )
                     FeatureButton("Такрори тест") {
-                        questions = words.shuffled().take(10)
+                        questions = eligibleWords.shuffled().take(10)
                         questionIndex = 0
                         score = 0
                         selectedAnswer = null
@@ -134,8 +146,8 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                     FeatureButton("Бозгашт") { page = "home" }
                 } else {
                     val question = questions[questionIndex]
-                    val options = remember(question.id, words) {
-                        (words.filter { it.id != question.id }
+                    val options = remember(question.id, eligibleWords, direction.source, direction.target) {
+                        (eligibleWords.filter { it.id != question.id }
                             .shuffled().take(3) + question).shuffled()
                     }
 
@@ -144,14 +156,14 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                         color = Color.LightGray
                     )
                     Text(
-                        question.english,
+                        wordLanguageText(question, direction.source),
                         color = Color.White,
                         fontSize = 25.sp
                     )
                     Spacer(Modifier.height(12.dp))
 
                     options.forEach { option ->
-                        FeatureButton(option.tajik) {
+                        FeatureButton(wordLanguageText(option, direction.target)) {
                             if (selectedAnswer == null) {
                                 selectedAnswer = option.id
                                 if (option.id == question.id) score++
@@ -162,7 +174,7 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                     selectedAnswer?.let {
                         Text(
                             if (it == question.id) "Ҷавоби дуруст! ✓"
-                            else "Ҷавоби дуруст: ${question.tajik}",
+                            else "Ҷавоби дуруст: ${wordLanguageText(question, direction.target)}",
                             color = Color.White
                         )
                         FeatureButton("Саволи навбатӣ") {
@@ -193,9 +205,8 @@ fun V16Screen(database: AppDatabase, padding: PaddingValues) {
                     LazyColumn {
                         items(words.filter { it.category == selectedCategory }) { word ->
                             Column(Modifier.fillMaxWidth().padding(10.dp)) {
-                                Text(word.english, color = Color.White, fontSize = 18.sp)
-                                Text(word.tajik, color = Color.LightGray)
-                                Text(word.russian, color = Color.Gray)
+                                Text(wordLanguageText(word, direction.source), color = Color.White, fontSize = 18.sp)
+                                Text(wordLanguageText(word, direction.target), color = Color.LightGray)
                             }
                             HorizontalDivider(color = Color.DarkGray)
                         }
@@ -254,6 +265,9 @@ private suspend fun createBackup(db: AppDatabase): String {
                 put("english", w.english)
                 put("tajik", w.tajik)
                 put("russian", w.russian)
+                put("chinese", w.chinese)
+                put("chinesePinyin", w.chinesePinyin)
+                put("chinesePronunciation", w.chinesePronunciation)
                 put("category", w.category)
                 put("level", w.level)
                 put("example", w.example)
@@ -297,6 +311,9 @@ private suspend fun restoreData(db: AppDatabase, text: String) {
                 english = o.getString("english"),
                 tajik = o.getString("tajik"),
                 russian = o.getString("russian"),
+                chinese = o.optString("chinese", ""),
+                chinesePinyin = o.optString("chinesePinyin", ""),
+                chinesePronunciation = o.optString("chinesePronunciation", ""),
                 category = o.optString("category", "General"),
                 level = o.optString("level", "Beginner"),
                 example = o.optString("example", "")

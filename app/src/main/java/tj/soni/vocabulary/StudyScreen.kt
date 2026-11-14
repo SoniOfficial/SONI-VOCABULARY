@@ -32,6 +32,8 @@ fun StudyScreen(
     padding: PaddingValues
 ) {
     val context = LocalContext.current
+    val directionState = rememberLanguageDirection()
+    val direction = directionState.value
     val scope = rememberCoroutineScope()
     val dao = remember(database) { database.studyScheduleDao() }
     val schedules by dao.observeAll().collectAsState(initial = emptyList())
@@ -77,6 +79,8 @@ fun StudyScreen(
             fontWeight = FontWeight.Bold
         )
 
+        LanguageDirectionSelector(direction) { directionState.value = it }
+
         if (activeSchedule != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -110,7 +114,7 @@ fun StudyScreen(
                         Text("Саволҳо бор нашуданд. Луғатро санҷед.")
                     } else {
                         Text(
-                            question.english,
+                            wordLanguageText(question, direction.source),
                             fontSize = 29.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary
@@ -120,17 +124,17 @@ fun StudyScreen(
                             Text(question.example)
                         }
 
-                        val options = remember(question.id, words) {
+                        val options = remember(question.id, words, direction.source, direction.target) {
                             (
                                 words.filter {
-                                    it.id != question.id && it.tajik.isNotBlank()
-                                }.map { it.tajik }.distinct().shuffled().take(3) +
-                                    question.tajik
+                                    it.id != question.id && wordLanguageText(it, direction.target).isNotBlank()
+                                }.map { wordLanguageText(it, direction.target) }.distinct().shuffled().take(3) +
+                                    wordLanguageText(question, direction.target)
                                 ).distinct().shuffled()
                         }
 
                         options.forEach { answer ->
-                            val correct = answer == question.tajik
+                            val correct = answer == wordLanguageText(question, direction.target)
                             val chosen = selectedAnswer == answer
 
                             Button(
@@ -175,12 +179,12 @@ fun StudyScreen(
 
                         if (selectedAnswer != null) {
                             Text(
-                                if (selectedAnswer == question.tajik)
+                                if (selectedAnswer == wordLanguageText(question, direction.target))
                                     "Офарин! Ҷавоби дуруст аст. ✓"
                                 else
-                                    "Ҷавоби дуруст: ${question.tajik}",
+                                    "Ҷавоби дуруст: ${wordLanguageText(question, direction.target)}",
                                 fontWeight = FontWeight.Bold,
-                                color = if (selectedAnswer == question.tajik)
+                                color = if (selectedAnswer == wordLanguageText(question, direction.target))
                                     Color(0xFF4CAF80)
                                 else
                                     Color(0xFFFF7777)
